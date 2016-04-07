@@ -7,222 +7,179 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include "arm_controller.hpp"
 
-#include <std_msgs/String.h>
-#include <std_msgs/Float32.h>
-
-#include "robot_params.hpp"
-
-#define DEFAULT_SPEED 150
 #define SAMPLING_FREQUENCY 20
-#define DYNAMIXELSERIAL "/dev/ttyACM0" //"/dev/ttyUSB0"
-#define VMAX 0.5
+#define DYNAMIXELSERIAL "/dev/ttyUSB0"
+//#define DYNAMIXELSERIAL "/dev/ttyACM0"
 
 
-namespace real{
+struct Parameters {
+	//Dynamixel parameters
+    static constexpr double MX_step_per_turn = 4096.0;
+    static constexpr double AX_step_per_turn = 1024.0;
+    static constexpr float read_duration = 0.02f;
+};
 
-/**
- * @brief The RobotArm class
- * This class provide all tools to control the crustcrawler (www.crustcrawler.com). This class use libdynamixel developped by J.B. Mouret (https://github.com/jbmouret/libdynamixel).
- */
-class RobotArm
-{
+class RobotArm {
+
 public:
-    typedef unsigned char byte_t;
+	
+	typedef unsigned char byte_t;
 
-    RobotArm()
-    {init();}
+	RobotArm();
+	~RobotArm();
+	
+	
+	/**
+	 * @brief initiatisation of connexion with all dynamixel
+	 */
+	void init();
 
-    ~RobotArm()
-    {relax();}
+	/**
+	 * @brief reset positions of dynamixel motors at zero
+	 */
+	void reset();
 
-    /**
-     * @brief initiatisation of connexion with all dynamixel
-     */
-    void init();
+	/**
+	 * @brief disable all dynamixel motors
+	 */
+	void relax();
 
-    /**
-     * @brief disable all dynamixel motors
-     */
-    void relax()
-    {
-        try{
-            std::cout << "relax..." << std::endl;
-            for (size_t i = 0; i < _actuators_ids.size(); ++i)
-            {
-                _controller.send(dynamixel::ax12::TorqueEnable(_actuators_ids[i], false));
-                _controller.recv(Params::read_duration, _status);
-            }
-            std::cout << "done" << std::endl;
-        }catch(dynamixel::Error e){
-            std::cerr << "dynamixel error : " << e.msg() << std::endl;
-        }
-    }
-
-    /**
-     * @brief enable all dynamixel motors;
-     */
-    void enable()
-    {
-        try{
-            std::cout << "enable motor..." << std::endl;
-            for (size_t i = 0; i < _actuators_ids.size(); ++i)
-            {
-                _controller.send(dynamixel::ax12::TorqueEnable(_actuators_ids[i], true));
-                _controller.recv(Params::read_duration, _status);
-            }
-            std::cout << "done" << std::endl;
-            usleep(1e5);
-        }catch(dynamixel::Error e){
-            std::cerr << "dynamixel error : " << e.msg() << std::endl;
-        }
-    }
+	/**
+	 * @brief enable all dynamixel motors;
+	 */
+	void enable();
+	
+	/**
+	 * @brief get current joint values of all dynamixel motors
+	 * @return joint values in fractions of PI
+	 */
+	std::vector<float> get_joint_values(std::vector<byte_t> actuators_ids = std::vector<byte_t>());
 
     /**
-     * @brief reset positions of dynamixel motors at zero
+     * @brief get current joint speeds of all dynamixel motors
+     * @return joint speeds in RPM
      */
-    void reset();
+    std::vector<float> get_joint_speeds(std::vector<byte_t> actuators_ids);
+
+
+	/**
+	 * @brief send joint values to dynamixel motors
+	 * @param controller vector of joint values in fraction of PI
+	 */
+	bool set_joint_values(std::vector<float> controller, std::vector<byte_t> actuators_ids = std::vector<byte_t>());
 
     /**
-     * @brief send to dynamixel motors the stable position for desactivation
+     * @brief send joint speeds to dynamixel motors
+     * @param controller vector of joint speeds in fraction of PI.Sec
      */
-    void toSleepPosition();
-    /**
-     * @brief get current joint values of all dynamixel motors
-     * @return joint values in fractions of PI
-     */
-    std::vector<float> get_joint_values(std::vector<byte_t> actuators_ids = std::vector<byte_t>());
+    bool set_joint_speeds(std::vector<float> controller, std::vector<byte_t> actuators_ids = std::vector<byte_t>());
 
     /**
-     * @brief send instructions to open the gripper
+     * @brief change dynamixel motors operating mode to wheel mode, allowing their control in speed
+     * @param motors IDs
      */
-    void open_gripper();
+    bool mode_speed(std::vector<byte_t> reduced_actuator_id);
 
     /**
-     * @brief send instructions to close the gripper
+     * @brief change dynamixel motors operating mode to joint mode, allowing their control in position
+     * @param motors IDs
      */
-    void close_gripper();
+    bool mode_position(std::vector<byte_t> reduced_actuator_id);
 
-    /**
-     * @brief set a trajectory in joint space to a set position
-     * @param ctrl vector of joint values in fraction of PI
-     * @param if true then use inverse kinematic control else use direct control. set to false by default.
-     */
-    bool set_joint_trajectory(std::vector<float>& ctrl,  std::vector<byte_t> actuators_ids, bool inverse = false);
-    bool set_joint_trajectory(std::vector<float>& ctrl,  bool inverse = false);
+	/**
+	 * @brief change the value of P coefficient in PID motor regulation
+	 * @param new value
+	 */
+	void changePValue(int val, int servo_index = -1);
 
-    /**
-     * @brief send joint values to dynamixel motors
-     * @param controller vector of joint values in fraction of PI
-     */
-    bool set_joint_values(std::vector<float> controller, std::vector<byte_t> actuators_ids = std::vector<byte_t>());
+	/**
+	 * @brief change the value of I coefficient in PID motor regulation
+	 * @param new value
+	 */
+	void changeIValue(int val, int servo_index = -1);
 
-    /**
-     * @brief number of dynamixel motors
-     * @return number of actuators
-     */
-    size_t nb_actuators() const
-    {
-        return _actuators_ids.size();
-    }
+	/**
+	 * @brief change the value of D coefficient in PID motor regulation
+	 * @param new value
+	 */
+	void changeDValue(int val, int servo_index = -1);
 
-    /**
-     * @brief close the connexion with the usb controllers
-     */
-    void close_usb_controllers()
-    {
+	/**
+	 * @brief close the connexion with the usb controllers
+	 */
+	void close_usb_controllers();
+	
+	
+	// Getters / Setters
+	dynamixel::Usb2Dynamixel& getController() { return _controller; }
+	void setController(dynamixel::Usb2Dynamixel controller) { _controller = controller; }
+	dynamixel::Status& getStatus() { return _status; }
+	void setStatus(dynamixel::Status status) { _status = status; }
+	std::vector<byte_t>& getActuatorsIds() { return _actuators_ids; }
+	void setActuatorsIds(std::vector<byte_t> actuators_ids) { _actuators_ids = actuators_ids; }
+	
+	float getSpeed() { return _speed; }
+	void setSpeed(float speed) { _speed = speed; }
+	bool getCrash() { return _crash; }
+	void setCrash(bool crash) { _crash = crash; }
+	std::vector<float>& getErrors() { return _errors; }
+	void setErrors(std::vector<float> errors) { _errors = errors; }
+	void setErrors(int val) { for(int i(0) ; i < 8 ; i++) { _errors.push_back(val); } }
 
-        _controller.close_serial();
-    }
-
-    /**
-     * @brief with a given start position and a goal position in joint space, this method compute a "step by step" trajectory
-     * @param start position in joint space in fraction of PI
-     * @param goal position in joint space in fraction of PI
-     * @return a vector of vector of joint values in fraction of PI
-     */
-    std::vector<std::vector<float> > getWayPoints(std::vector<float> goal, std::vector<byte_t> actuator_ids);
-
-    /**
-     * @brief final_pos (deprecated)
-     * @return
-     */
-    const std::vector<float>& final_pos() const {return _final_pos;}
-
-    /**
-     * @brief isDead (deprecated)
-     * @return
-     */
-    bool isDead()const {return _dead;}
-
-
-    /**
-     * @brief compute the forward model.
-     * @param joint values in radian
-     * @return approximate effector position in meter
-     */
-    std::vector<float> forward_model(const std::vector<float>& a) const;
-
-    /**
-     * @brief This method performs the control of the robot in the 3D operational space, based on inversed jacobian. (The orientation of the gripper is not considered yet.)
-     * @param 3 dimensional vector: target position
-     */
-    std::vector<std::vector<float> > control_inverse(const std::vector<float>& target);
-
-    /**
-     * @brief compute the jacobian matrix
-     * @param joint values in radian
-     * @return jacobian matrix
-     */
-    Eigen::MatrixXd jacobian(const std::vector<float>& a) const;
 
 protected:
 
+	dynamixel::Usb2Dynamixel _controller;
+	dynamixel::Status _status;
+	std::vector<byte_t> _actuators_ids;
+	
+	float _speed;
+	bool _crash;
+	std::vector<float> _errors;
 
+	/**
+	 * @brief conversion from fraction of PI to step per turn for MX dynamixel motor
+	 * @param a
+	 * @return
+	 */
+    int rad_to_stepperturn_MX(float a) { return Parameters::MX_step_per_turn/2*(1+a); }
 
-    dynamixel::Usb2Dynamixel _controller;
-
-    std::vector<float> _final_pos;
-    dynamixel::Status _status;
-    std::vector<byte_t> _actuators_ids;
-    bool _dead;
-    bool _is_close;
-
-    std::vector<float> getDistances(std::vector<float> v1, std::vector<float> v2);
-    float difference(float a, float b);
-
-    //functions for inverse kinematic model.
-    Eigen::Matrix4d trmat_dh(const Eigen::VectorXd& dh)const;
-    Eigen::MatrixXd dh_mat(const std::vector<float>& a) const;
-    std::vector<Eigen::Matrix4d> sub_trmat(const std::vector<float>& a) const;
+	/**
+	 * @brief conversion from fraction of PI to step per turn for AX dynamixel motor
+	 * @param a
+	 * @return
+	 */
+    int rad_to_stepperturn_AX(float a) { return Parameters::AX_step_per_turn/2*(1+a); }
 
     /**
-     * @brief conversion from fraction of PI to step per turn for MX dynamixel motor
+     * @brief conversion from revolution per second (RPS) to revolution per minute (RPM) dynamixel motor speed
      * @param a
      * @return
      */
-    int rad_to_stepperturn_MX(float a){return Params::MX_step_per_turn/2*(1+a);}
+    int rps_to_rpm(float a) { return fabs(a)*60; }
 
     /**
-     * @brief conversion from fraction of PI to step per turn for AX dynamixel motor
+     * @brief conversion from (RPM) dynamixel motor speed to (RPS)
      * @param a
      * @return
      */
-    int rad_to_stepperturn_AX(float a){return Params::AX_step_per_turn/2*(1+a);}
+    float rpm_to_rps(int a) { return a/60.0; }
 
-    /**
-     * @brief conversion from MX step per turn to fraction of PI
-     * @param a
-     * @return
-     */
-    float MX_stepperturn_to_rad(int a){return 2*((float)a)/Params::MX_step_per_turn-1;}
+	/**
+	 * @brief conversion from MX step per turn to fraction of PI
+	 * @param a
+	 * @return
+	 */
+	float MX_stepperturn_to_rad(int a) { return 2*((float)a)/Parameters::MX_step_per_turn-1; }
 
-    /**
-     * @brief conversion from AX step per turn to fraction of PI
-     * @param a
-     * @return
-     */
-    float AX_stepperturn_to_rad(int a){return 2*((float)a)/Params::AX_step_per_turn-1;}
+	/**
+	 * @brief conversion from AX step per turn to fraction of PI
+	 * @param a
+	 * @return
+	 */
+	float AX_stepperturn_to_rad(int a) { return 2*((float)a)/Parameters::AX_step_per_turn-1; }
 };
-}
+
 #endif
