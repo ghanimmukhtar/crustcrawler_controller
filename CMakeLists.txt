@@ -24,3 +24,5 @@ install(TARGETS real_controllers
     ARCHIVE DESTINATION /usr/local/lib
     LIBRARY DESTINATION /usr/local/lib)
 
+add_executable(test_real_crustcrawler_arm src/test_real_crustcrawler_arm.cpp)
+target_link_libraries(test_real_crustcrawler_arm real_controllers dynamixel)
