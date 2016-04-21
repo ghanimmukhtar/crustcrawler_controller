@@ -22,6 +22,9 @@ private :
     //This function returns all the intermediate transformation matrices between all joints, this will be used later to formulate the jacobian matrix
     std::vector<Eigen::Matrix4d> sub_trmat(const std::vector<float>& a) const;
 
+    //getter for the duration
+    float& get_duration(){return *duration;}
+
 
     //variables definition
     std::vector<float> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
@@ -31,6 +34,13 @@ private :
 public :
 
     Kinematics(){};
+
+    /**
+     * @brief initializing necessary variables to guide the arm to a desired Cartesian position.
+     * @param desired position, x, y and z coordinates
+     * @return nothing but initialization of appropriate variables
+     */
+    void init_motion(std::vector<float> desired_position);
 
     /**
      * @brief compute jacobian matrix for the current arm configurations (current joints angle).
@@ -45,6 +55,20 @@ public :
      * @return approximate effector position in meter
      */
     std::vector<float> forward_model(const std::vector<float>& a) const;
+
+    /**
+     * @brief guide the arm to a desired joints angles q(q1,q2,q3,q4,q5,q6) in velocity mode for each actuator.
+     * @param desired joints positions (waypoint), a vector (q)
+     * @return nothing but it guides the arm to the desired joints angles in velocity mode
+     */
+    void goto_desired_joints_angles_velocity_mode(std::vector<float> desired_joints_angles);
+
+    /**
+     * @brief guide the arm to a desired joints angles q(q1,q2,q3,q4,q5,q6) in position mode for each actuator.
+     * @param desired joints positions (waypoint), a vector (q)
+     * @return nothing but it guides the arm to the desired joints angles in position mode
+     */
+    void goto_desired_joints_angles_position_mode(std::vector<float> desired_joints_angles);
 
     /**
      * @brief This method performs the control of the robot in the 3D operational space, based on inversed jacobian. (The orientation of the gripper is not considered yet.)
