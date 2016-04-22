@@ -10,8 +10,8 @@
 #include "arm_controller.hpp"
 
 #define SAMPLING_FREQUENCY 20
-#define DYNAMIXELSERIAL "/dev/ttyUSB0"
-//#define DYNAMIXELSERIAL "/dev/ttyACM0"
+//#define DYNAMIXELSERIAL "/dev/ttyUSB0"
+#define DYNAMIXELSERIAL "/dev/ttyACM0"
 
 
 struct Parameters {
