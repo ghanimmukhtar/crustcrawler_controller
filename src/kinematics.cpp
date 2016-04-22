@@ -192,7 +192,7 @@ void Kinematics::init_motion(std::vector<float> desired_position){
     control_inverse_initialize(desired_position,last_angles);
 }
 
-/*void Kinematics::goto_desired_position(std::vector<float> desired_position){
+void Kinematics::goto_desired_position(std::vector<float> desired_position){
     std::vector<float> joints_speeds(7);
     std::vector<float> joints_velocity,last_angles,my_last_angles;
     duration = 6;
@@ -218,29 +218,29 @@ void Kinematics::init_motion(std::vector<float> desired_position){
     //perform the trajectory in the desired time:
 
     //first initialize a timer
-    boost::timer initial_time_here;*/
+    boost::timer initial_time_here;
 
 
-    /*
+
     //Then for the specified duration calculate each iteration the proper joints velocities and set them
     while(initial_time_here.elapsed() < duration)
     {
         //at each iteration get the current joint angles, as described before
         my_last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
         for (int i = 0; i < my_last_angles.size(); i++)
-            last_angles[i] = M_PI*my_last_angles[i] - initial_joint_values[i];*/
+            last_angles[i] = M_PI*my_last_angles[i] - initial_joint_values[i];
         /*solve for current desired joints speeds, and it appears that the return speeds are actually in RPS (Revolution Per Second) rather than radian/sec, more analysis is to
          * be carried out to see exactly why it gives this, but for the moment it simply means they don't any conversio except for converting them to RPM (Revolution Per Minute)
          * as this what the crustcrawler motors expect as speed command, this is done in the method (set_joint_speeds()) which belongs to robotArm class
         */
-        /*
+
         joints_velocity = control_inverse(last_angles,duration,initial_time_here.elapsed());
         //set joints velocities
         robot.getArm().set_joint_speeds(joints_velocity,reduced_actuator_id);
     }
     //the end effector should be now at the desired position, so finish the program and close the crustcrawler communication bus
     robot.getArm().close_usb_controllers();
-}*/
+}
 
 //Guides the real arm to desired joints angles by setting joints velocities to proper values each iteration till the duration time is reached
 void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<float> desired_joints_angles){

@@ -22,9 +22,6 @@ private :
     //This function returns all the intermediate transformation matrices between all joints, this will be used later to formulate the jacobian matrix
     std::vector<Eigen::Matrix4d> sub_trmat(const std::vector<float>& a) const;
 
-    //getter for the duration
-    float& get_duration(){return *duration;}
-
 
     //variables definition
     std::vector<float> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
@@ -83,6 +80,9 @@ public :
      * @return nothing but guide the arm to the desired position
      */
     void goto_desired_position(std::vector<float> desired_position);
+
+    //getter for the duration
+    float get_duration(){return duration;}
 };
 
 #endif
