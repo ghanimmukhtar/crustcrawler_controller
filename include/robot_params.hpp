@@ -11,13 +11,13 @@
 struct Params {
     // Plinth
     static constexpr double  body_width = 0.2;
-    static constexpr double  body_height = 0.043;
+    static constexpr double  body_height = 0.055/*0.043*/;
     static constexpr double  body_length = 0.2;
     static constexpr double  body_mass = 20;
 
     // Pivot
     static constexpr double  p1_width = 0.13;
-    static constexpr double  p1_height = 0.082;
+    static constexpr double  p1_height = 0.057/*0.082*/;
     static constexpr double  p1_length = 0.13;
     static constexpr double  p1_mass = 0.180;
 
@@ -38,7 +38,7 @@ struct Params {
     static constexpr double  p4_mass = 0.100;
 
     static constexpr double  p5_width = 0.049;
-    static constexpr double  p5_height = 0.065;
+    static constexpr double  p5_height = 0.074/*0.065*/;
     static constexpr double  p5_length = 0.05;
     static constexpr double  p5_mass = 0.078;
 
@@ -47,6 +47,10 @@ struct Params {
     static constexpr double  p6_height = 0.07;
     static constexpr double  p6_length = 0.034;
     static constexpr double  p6_mass = 0.078;
+
+
+    // Gripper
+    static constexpr double  gripper_height = 0.16;
 
     // Fingers
     static constexpr double  finger_width = 0.022;

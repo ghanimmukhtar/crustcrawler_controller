@@ -1,4 +1,4 @@
-#include "../include/kinematics.hpp"
+#include "kinematics.hpp"
 #include <iostream>
 #include <typeinfo>
 
@@ -23,7 +23,14 @@ std::vector<unsigned char> reduced_actuator_id (tmp1, tmp1 + 7);
 Eigen::MatrixXd Kinematics::kk_mat(const std::vector<float>& a) const
 {
     //robot description (dimensions of each link and joint)
-    float body = 0.05;    float p1 = 0.056;    float p2 = 0.23;    float p3 = 0.155;    float p4 = 0.08;    float p5 = 0.07;    float p6 = 0.021;    float gripper_height = 0.171;
+    float body = Params::body_height/*0.05*/,
+            p1 = Params::p1_height/*0.056*/,
+            p2 = Params::p2_height/*0.23*/,
+            p3 = Params::p3_height /*0.155*/,
+            p4 = Params::p4_height /*0.08*/,
+            p5 = Params::p5_height/*0.07*/,
+            p6 = Params::p6_height /*0.021*/,
+            gripper_height = Params::gripper_height /*0.171*/;
     /* This is the geometric representation of the robot according to Khalil-Kleinfinger notation, the additional colomn is to represent the type of the joint it is 0 for
      * revolute, 1 for translational and 2 for fixed joint, it will be useful later for the dynamic model if needed, for more details refer to : "Modeling and Control of
      * Manipulators Part I: Geometric and Kinematic Models" by Wisama KHALIL [1]
@@ -35,7 +42,7 @@ Eigen::MatrixXd Kinematics::kk_mat(const std::vector<float>& a) const
                0,         0,         p2,   a[2]+(M_PI/2),      0,
                0,         0,         p3,       a[3],           0,
                0,         0,         p4,   a[4]-(M_PI/2),      0,
-               0,      -M_PI/2,       0,       a[5],          gripper_height+p5+p6;
+               0,      -M_PI/2,       0,       a[5],          gripper_height+p5/*+p6*/;
     return kk;
 }
 
@@ -133,6 +140,7 @@ void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::
     initial_pos = forward_model(initial_joint_values);
     //then deduce the distance vector using only the position part of the initial_pos vector, and the target position
     distance << target_pos[0] - initial_pos[0], target_pos[1] - initial_pos[1], target_pos[2] - initial_pos[2];
+    std::cout << "Distance to be covered: " << distance << std::endl;
 }
 
 
@@ -140,7 +148,7 @@ void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::
  * and the duration (which will be used to produce the desired linear velocities via rtdot.
  * Refer to [1]  and "Identification and Control of Robots Part II: Control" by Wisama KHALIL [2] for more details.
  * */
-std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_values, float duration, float current_time){
+std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_values, float duration, double current_time){
     //get the jacobian for the current joints angles
     Eigen::MatrixXd jt(jacobian(actual_joint_values));
     //use only the first three rows as the task space is limited to the three cartesian positions only
