@@ -7,6 +7,7 @@
 #include <boost/timer.hpp>
 #include "robotArm.hpp"
 #include "real.hpp"
+#include "robot_params.hpp"
 
 /**
  * @brief The ArmTrajectory class
@@ -72,7 +73,7 @@ public :
      * @param 3 dimensional vector: target position
      */
     void control_inverse_initialize (std::vector<float> target, std::vector<float> initial_joint_pos);
-    std::vector<float> control_inverse(std::vector<float> actual_joint_pos, float duration, float current_time);
+    std::vector<float> control_inverse(std::vector<float> actual_joint_pos, float duration, double current_time);
 
     /**
      * @brief use invers kinematic method to guide the arm to a desired Cartesian position.

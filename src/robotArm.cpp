@@ -12,7 +12,8 @@ RobotArm::RobotArm() {
 }
 
 RobotArm::~RobotArm() {
-	relax();
+    std::cout << "i m dying" << std::endl;
+//	relax();
 }
 
 void RobotArm::init() {
@@ -216,8 +217,11 @@ bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector<byte_t> a
                  * significant role in determining the maximum joint velocity the algorithm will give. So if the returned velocities are higher than the set safety limits then
                  * just try to prolong the duration the duration
                 */
-                if (speed_value > 100)
+                assert(speed_value < 100);
+                if (speed_value > 100){
                     vel[i] = 100;
+
+                }
                 else
                     vel[i] = rps_to_rpm(*it);
 
