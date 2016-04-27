@@ -31,7 +31,9 @@ private :
 
 public :
 
-    Kinematics(){};
+    Kinematics(){
+        duration = 6;
+    }
 
     /**
      * @brief initializing necessary variables to guide the arm to a desired Cartesian position.
@@ -84,6 +86,7 @@ public :
 
     //getter for the duration
     float get_duration(){return duration;}
+    void set_duration(float d){duration = d;}
 };
 
 #endif
