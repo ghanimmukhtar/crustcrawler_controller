@@ -179,7 +179,7 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
 void Kinematics::init_motion(std::vector<float> desired_position){
     std::vector<float> joints_speeds(7);
     std::vector<float> last_angles;
-    duration = 6;
+//    duration = d;
     Real robot;
     //set motors speed to zero so that they start from static situation
     for (int k = 0; k < reduced_actuator_id.size(); k++){
@@ -203,7 +203,7 @@ void Kinematics::init_motion(std::vector<float> desired_position){
 void Kinematics::goto_desired_position(std::vector<float> desired_position){
     std::vector<float> joints_speeds(7);
     std::vector<float> joints_velocity,last_angles,my_last_angles;
-    duration = 6;
+//    duration = d;
     Real robot;
     //set motors speed to zero so that they start from static situation
     for (int k = 0; k < reduced_actuator_id.size(); k++){
