@@ -228,8 +228,6 @@ void Kinematics::goto_desired_position(std::vector<float> desired_position){
     //first initialize a timer
     boost::timer initial_time_here;
 
-
-
     //Then for the specified duration calculate each iteration the proper joints velocities and set them
     while(initial_time_here.elapsed() < duration)
     {
@@ -309,6 +307,7 @@ void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<float> des
     robot.getArm().close_usb_controllers();
 }
 
+//Guides the real arm to desired joints angles using position mode but limiting the velocity by which actuators goes to these angles
 void Kinematics::goto_desired_joints_angles_position_mode(std::vector<float> desired_joints_angles){
     //this will be the velocity command send to the joints
     std::vector<float> joints_speeds(7);
@@ -331,4 +330,28 @@ void Kinematics::goto_desired_joints_angles_position_mode(std::vector<float> des
        std::cout << "finishing angle for joint: " << i << " is: " << M_PI*finishing_angles[i] << std::endl;
     //the joints should be now at their desired angles, so finish the program and close the crustcrawler communication bus
     robot.getArm().close_usb_controllers();
+}
+
+//starting from the current position of the end effector this method will make the end effector goes for small distance in a forward sense
+void Kinematics::primitive_motion(){
+    std::vector<float> current_angles,current_position,target_position(3);
+    float prim_distance = 0.05; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
+    Real robot;
+
+    //get the current position, by getting current joint angles and then passing them to the forward model
+    current_angles = robot.getArm().get_joint_values(reduced_actuator_id);
+    for (int i = 0; i < current_angles.size(); i++)
+        current_angles[i] = M_PI*current_angles[i] - initial_joint_values[i];
+    current_position = forward_model(current_angles);
+
+    //get the diagonal line from the origin to the end effector
+    double angle = atan2(current_position[1],current_position[0]);
+
+    //set the target position which will have the same z coordinate but x and y will change according to the direction defined above
+    target_position[0] = current_position[0] + prim_distance*cos(angle);
+    target_position[1] = current_position[1] + prim_distance*sin(angle);
+    target_position[2] = current_position[2];
+
+    //perform the motion using the method goto_desired_position
+    goto_desired_position(target_position);
 }
