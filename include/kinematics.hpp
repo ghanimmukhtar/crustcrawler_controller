@@ -4,6 +4,7 @@
 #include <cmath>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <Eigen/Dense>
 #include <boost/timer.hpp>
 #include "robotArm.hpp"
 #include "real.hpp"
@@ -28,6 +29,7 @@ private :
     std::vector<float> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
     float rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
     float duration; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
+    const double max_speed = 0.2;
 
 public :
 

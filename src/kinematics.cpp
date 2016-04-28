@@ -140,7 +140,13 @@ void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::
     initial_pos = forward_model(initial_joint_values);
     //then deduce the distance vector using only the position part of the initial_pos vector, and the target position
     distance << target_pos[0] - initial_pos[0], target_pos[1] - initial_pos[1], target_pos[2] - initial_pos[2];
-    std::cout << "Distance to be covered: " << distance << std::endl;
+
+    std::cout << "distance norm" << distance.norm() << std::endl;
+    duration = distance.norm()/max_speed;
+    std::cout << "duration" << duration << std::endl;
+
+
+//    std::cout << "Distance to be covered: " << distance << std::endl;
 }
 
 
