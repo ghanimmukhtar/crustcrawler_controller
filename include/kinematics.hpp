@@ -86,6 +86,13 @@ public :
      */
     void goto_desired_position(std::vector<float> desired_position);
 
+    /**
+     * @brief performs a primitive motion.
+     * @param no parameters needed,
+     * @return nothing but guide the arm into the desired direction
+     */
+    void primitive_motion();
+
     //getter for the duration
     float get_duration(){return duration;}
     void set_duration(float d){duration = d;}
