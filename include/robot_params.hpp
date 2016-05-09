@@ -3,6 +3,8 @@
 
 #include <string>
 
+namespace robot{
+
 /**
  * @brief Params struct
  * In this struct is listed all parameters about the crustcrawler robot.
@@ -11,13 +13,13 @@
 struct Params {
     // Plinth
     static constexpr double  body_width = 0.2;
-    static constexpr double  body_height = 0.055/*0.043*/;
+    static constexpr double  body_height = /*0.055*/0.043;
     static constexpr double  body_length = 0.2;
     static constexpr double  body_mass = 20;
 
     // Pivot
     static constexpr double  p1_width = 0.13;
-    static constexpr double  p1_height = 0.057/*0.082*/;
+    static constexpr double  p1_height = /*0.057*/0.082;
     static constexpr double  p1_length = 0.13;
     static constexpr double  p1_mass = 0.180;
 
@@ -38,7 +40,7 @@ struct Params {
     static constexpr double  p4_mass = 0.100;
 
     static constexpr double  p5_width = 0.049;
-    static constexpr double  p5_height = 0.074/*0.065*/;
+    static constexpr double  p5_height = /*0.074*/0.065;
     static constexpr double  p5_length = 0.05;
     static constexpr double  p5_mass = 0.078;
 
@@ -50,14 +52,32 @@ struct Params {
 
 
     // Gripper
-    static constexpr double  gripper_height = 0.16;
+    static constexpr double  gripper_height = 0.095;//0.16;
 
     // Fingers
-    static constexpr double  finger_width = 0.022;
-    static constexpr double  finger_height = 0.095;
-    static constexpr double  finger_length = 0.034;
-    static constexpr double  finger_mass = 0.085;
-    static constexpr double  finger_inter_dist = 0.05;
+    static constexpr double finger_height = 0.171;
+    static constexpr double	finger_inter_dist = 0.055;
+
+    static constexpr double	finger_width1 = 0.085;
+    static constexpr double	finger_height1 = 0.041;
+    static constexpr double	finger_length1 = 0.035;
+    static constexpr double	finger_mass1 = 0.016;
+    static constexpr double	finger_width2 = 0.015;
+    static constexpr double	finger_height2 = 0.025;
+    static constexpr double	finger_length2 = 0.035;
+    static constexpr double	finger_mass2 = 0.016;
+    static constexpr double	finger_width3 = 0.002;
+    static constexpr double	finger_height3 = 0.02;
+    static constexpr double	finger_length3 = 0.034;
+    static constexpr double	finger_mass3 = 0.016;
+    static constexpr double	finger_width4 = 0.002;
+    static constexpr double	finger_height4 = 0.05;
+    static constexpr double	finger_length4 = 0.022;
+    static constexpr double	finger_mass4 = 0.016;
+    static constexpr double	finger_width5 = 0.002;
+    static constexpr double	finger_height5 = 0.02;
+    static constexpr double	finger_length5 = 0.022;
+    static constexpr double	finger_mass5 = 0.016;
 
     //ik parameters
     static constexpr double gain = 0.05;
@@ -70,6 +90,8 @@ struct Params {
     static constexpr double AX_step_per_turn = 1024.0;
     static constexpr float read_duration = 0.02f;
 };
+
+}
 
 #endif
 

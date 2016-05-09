@@ -29,7 +29,7 @@ private :
     std::vector<float> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
     float rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
     float duration; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
-    const double max_speed = 0.2;
+    const double max_speed = 1.;
 
 public :
 
@@ -50,6 +50,13 @@ public :
      * @return the jacobian matrix
      */
     Eigen::MatrixXd jacobian(const std::vector<float>& a) const;
+
+    /**
+     * @brief pseudo_inverse
+     * @param mat
+     * @param invMat
+     */
+    void pseudo_inverse(const Eigen::MatrixXd& mat,Eigen::MatrixXd& invMat);
 
     /**
      * @brief compute the forward model.

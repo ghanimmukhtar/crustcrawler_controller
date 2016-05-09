@@ -2,6 +2,8 @@
 #include <iostream>
 #include <typeinfo>
 
+using namespace robot;
+
 /* Global variables:
  * these variables are defined here because they are global besides i had trouble initializing them in the kinematic header file, may be their placement will be changed later
 */
@@ -42,7 +44,7 @@ Eigen::MatrixXd Kinematics::kk_mat(const std::vector<float>& a) const
                0,         0,         p2,   a[2]+(M_PI/2),      0,
                0,         0,         p3,       a[3],           0,
                0,         0,         p4,   a[4]-(M_PI/2),      0,
-               0,      -M_PI/2,       0,       a[5],          gripper_height+p5/*+p6*/;
+               0,      -M_PI/2,       0,       a[5],          gripper_height+p5+p6;
     return kk;
 }
 
@@ -85,6 +87,29 @@ Eigen::MatrixXd Kinematics::jacobian(const std::vector<float>& a) const {
         jacob.col(i).tail(3) = mats[i].col(2).head(3);
     }
     return jacob;
+}
+
+void Kinematics::pseudo_inverse(const Eigen::MatrixXd &mat, Eigen::MatrixXd &invMat){
+    //do the singular value decomposition which will then help in solving the system jt_p*joint_velocities = desired_twist. Refer to [1] for more details.
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(mat, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+    if(!svd.computeV() || !svd.computeU()){
+        std::cout << "impossible to compute svd" << std::endl;
+        exit(1);
+    }
+
+    Eigen::MatrixXd invSigma(3,3);
+    for(int i = 0; i < invSigma.rows();i++){
+        for(int j = 0; j < invSigma.cols();j++){
+            if(i == j){
+                assert(svd.singularValues()(i) != 0);
+                invSigma(i,j) = 1/svd.singularValues()(i);
+            }
+            else invSigma(i,j) = 0;
+        }
+    }
+
+    invMat = svd.matrixV()*invSigma*svd.matrixU().transpose();
 }
 
  /* The output of the forward model is the three position Cartesian coordinates and three angles (Roll, Pitch, Yaw) with the following order of rotations
@@ -142,7 +167,7 @@ void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::
     distance << target_pos[0] - initial_pos[0], target_pos[1] - initial_pos[1], target_pos[2] - initial_pos[2];
 
     std::cout << "distance norm" << distance.norm() << std::endl;
-    duration = distance.norm()/max_speed;
+    duration = 7.5*distance.norm()/max_speed;
     std::cout << "duration" << duration << std::endl;
 
 
@@ -160,6 +185,21 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
     //use only the first three rows as the task space is limited to the three cartesian positions only
     Eigen::MatrixXd jt_p = jt.block<3, 6>(0, 0);
 
+    //Part for joints limits avoidance
+    Eigen::MatrixXd Id = Eigen::VectorXd::Ones(6).asDiagonal();
+    Eigen::VectorXd Z(6);
+    Eigen::VectorXd joint_val(6);
+    joint_val << actual_joint_values[0]
+              , actual_joint_values[1]
+              , actual_joint_values[2]
+              , actual_joint_values[3]
+              , actual_joint_values[4]
+              , actual_joint_values[5];
+    double a = -.01;
+    double delta_j_limit = M_PI;
+    Z = 2*a*joint_val/(delta_j_limit*delta_j_limit);
+
+
     //this will be the output of the function, it is constructed each iteration to ensure its emptyness
     std::vector<float> joints_velocity;
 
@@ -168,9 +208,12 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
     rtdot =(30*pow(current_time,2))/pow(duration,3) - (60*pow(current_time,3))/pow(duration,4) + (30*pow(current_time,4))/pow(duration,5);
     desired_kinematic_twist << rtdot * distance(0), rtdot * distance(1), rtdot * distance(2);
 
-    //do the singular value decomposition which will then help in solving the system jt_p*joint_velocities = desired_twist. Refer to [1] for more details.
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(jt_p, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
+    Eigen::MatrixXd invJt_p(6,3);
+    pseudo_inverse(jt_p,invJt_p);
+
+    Eigen::VectorXd delta_joint(invJt_p*desired_kinematic_twist + (Id - invJt_p*jt_p)*Z);
+
+//    Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
 
     //fill the joints velocity with corresponding values from delta_joint variable, then return the vector
     for (int i = 0;i < delta_joint.size();i++)
