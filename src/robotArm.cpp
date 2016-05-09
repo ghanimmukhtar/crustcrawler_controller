@@ -8,7 +8,7 @@
 RobotArm::RobotArm() {
 	setCrash(false);
 	setErrors(0);
-	init();
+    init();
 }
 
 RobotArm::~RobotArm() {
@@ -16,36 +16,38 @@ RobotArm::~RobotArm() {
 //	relax();
 }
 
-void RobotArm::init() {
-	try {
-		getController().open_serial(DYNAMIXELSERIAL, B1000000);
-		
-		// Scan actuators IDs
-		getController().scan_ax12s();
-		
-		const std::vector<byte_t>& ax12_ids = getController().ax12_ids();
-		if (!ax12_ids.size()) {
-			std::cerr << "[real_arm] no dynamixel detected" << std::endl;
-			setCrash(true);
-			return;
-		}
-		std::cout << "[real_arm] " << ax12_ids.size() << " dynamixel are connected" << std::endl;
-		
+void RobotArm::init(){
+    try {
+
+
+        getController().open_serial(DYNAMIXELSERIAL, B1000000);
+
+        // Scan actuators IDs
+        getController().scan_ax12s();
+
+        const std::vector<byte_t>& ax12_ids = getController().ax12_ids();
+        if (!ax12_ids.size()) {
+            std::cerr << "[real_arm] no dynamixel detected" << std::endl;
+            setCrash(true);
+            return;
+        }
+        std::cout << "[real_arm] " << ax12_ids.size() << " dynamixel are connected" << std::endl;
+
         getActuatorsIds().push_back(1); //turntable : MX-28
-		getActuatorsIds().push_back(2); // actuators 2 & 3 : 1st joint : 2*MX-106
-		getActuatorsIds().push_back(3);
-		getActuatorsIds().push_back(4); // 2nd joint : MX-106
-		getActuatorsIds().push_back(5); // 3rd joint : MX-64
-		getActuatorsIds().push_back(6); // 4th joint : MX-28
-		getActuatorsIds().push_back(7); // 5th joint "base gripper" : MX-28
-		getActuatorsIds().push_back(8); // right finger joint : AX-18A
+        getActuatorsIds().push_back(2); // actuators 2 & 3 : 1st joint : 2*MX-106
+        getActuatorsIds().push_back(3);
+        getActuatorsIds().push_back(4); // 2nd joint : MX-106
+        getActuatorsIds().push_back(5); // 3rd joint : MX-64
+        getActuatorsIds().push_back(6); // 4th joint : MX-28
+        getActuatorsIds().push_back(7); // 5th joint "base gripper" : MX-28
+        getActuatorsIds().push_back(8); // right finger joint : AX-18A
         getActuatorsIds().push_back(9); // left finger joint : AX-18A
-		
-		// PID
-		/* P coefficient ; cw compliance slope
-		 * I coefficient ; ccw compliance margin
-		 * D coefficient ; cw compliance margin
-		 */
+
+        // PID
+        /* P coefficient ; cw compliance slope
+         * I coefficient ; ccw compliance margin
+         * D coefficient ; cw compliance margin
+         */
         /*changePValue(82);
         changeIValue(20);
         changeDValue(0);*/
@@ -53,10 +55,11 @@ void RobotArm::init() {
         changeIValue(0);
         changeDValue(0);
 
-	}
-	catch (dynamixel::Error e) {
-		std::cerr << "[real_arm] error (dynamixel): " << e.msg() << std::endl;
-	}
+    }
+    catch (dynamixel::Error e) {
+        std::cerr << "[real_arm] error (dynamixel): " << e.msg() << std::endl;
+    }
+
 }
 
 void RobotArm::reset() {
@@ -217,9 +220,8 @@ bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector<byte_t> a
                  * significant role in determining the maximum joint velocity the algorithm will give. So if the returned velocities are higher than the set safety limits then
                  * just try to prolong the duration the duration
                 */
-                assert(speed_value < 100);
-                if (speed_value > 100){
-                    vel[i] = 100;
+                if (speed_value > 200){
+                    vel[i] = 200;
 
                 }
                 else

@@ -27,14 +27,14 @@ public:
 	
 	typedef unsigned char byte_t;
 
-	RobotArm();
+    RobotArm();
 	~RobotArm();
 	
 	
 	/**
 	 * @brief initiatisation of connexion with all dynamixel
 	 */
-	void init();
+    void init();
 
 	/**
 	 * @brief reset positions of dynamixel motors at zero
@@ -137,7 +137,8 @@ protected:
 	
 	float _speed;
 	bool _crash;
-	std::vector<float> _errors;
+    bool _simulation_mode;
+    std::vector<float> _errors;
 
 	/**
 	 * @brief conversion from fraction of PI to step per turn for MX dynamixel motor
