@@ -76,6 +76,8 @@ public:
      */
     bool set_joint_speeds(std::vector<float> controller, std::vector<byte_t> actuators_ids = std::vector<byte_t>());
 
+    bool set_speeds_to_zero( std::vector<byte_t> actuators_ids = std::vector<byte_t>());
+
     /**
      * @brief change dynamixel motors operating mode to wheel mode, allowing their control in speed
      * @param motors IDs

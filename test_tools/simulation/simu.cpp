@@ -63,29 +63,29 @@ void Simu::launch(Arm_controller &ac) {
 	
 	
 	// Launch all waypoint with stabilization between them (stab time explains a lot the time of Map-Elite process)
-	if(!stabilize(Params_Simu::global::intensityOfStab/2)) { return; }
+//	if(!stabilize(Params_Simu::global::intensityOfStab/2)) { return; }
 	
 	Eigen::Vector3d posCube(0, 0, 0);
 	for(int i(-1) ; i < ac.getNbWaypoints()-1 ; i++) {
 //		std::cout << "[simulation] move from wp" << i << " to wp" << i+1 << std::endl;
 		goToWaypoint(ac, ac.getWaypoint(i+1)); // From i to i+1 (i = -1 for origin)
-		if(!stabilize(Params_Simu::global::intensityOfStab)) { return; }
+//		if(!stabilize(Params_Simu::global::intensityOfStab)) { return; }
 	}
 	
-	if(!stabilizeCube(Params_Simu::global::intensityOfStab)) { return; }
+//	if(!stabilizeCube(Params_Simu::global::intensityOfStab)) { return; }
 	
 	
-	// Recover all data needed for (1) knowing the concerned cell and (2) the appropriated performance
-	// (1) - 5 dims
-	if(getEffectorAngle() == -1) {
-		setEffectorAngle(0.5);
-		setWristAngle(0.5);
-	}
-	// (1) - 6 dims
-	Eigen::Vector3d diff;
-	for(int i(0) ; i < 3 ; i++)
-		diff[i] = getMax()[i]-getMin()[i];
-	setDiffCoords(diff);
+//	// Recover all data needed for (1) knowing the concerned cell and (2) the appropriated performance
+//	// (1) - 5 dims
+//	if(getEffectorAngle() == -1) {
+//		setEffectorAngle(0.5);
+//		setWristAngle(0.5);
+//	}
+//	// (1) - 6 dims
+//	Eigen::Vector3d diff;
+//	for(int i(0) ; i < 3 ; i++)
+//		diff[i] = getMax()[i]-getMin()[i];
+//	setDiffCoords(diff);
 	
 }
 

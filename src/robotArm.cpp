@@ -260,6 +260,11 @@ bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector<byte_t> a
     }
 }
 
+bool RobotArm::set_speeds_to_zero(std::vector<byte_t> actuators_ids){
+    std::vector<float> joints_speeds(actuators_ids.size(),0.0);
+    return set_joint_speeds(joints_speeds,actuators_ids);
+}
+
 //set the operation mode for given actuators to wheel mode which allows their control in velocity
 bool RobotArm::mode_speed(std::vector<byte_t> reduced_actuator_id){
     try{

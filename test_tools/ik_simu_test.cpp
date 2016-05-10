@@ -44,8 +44,10 @@ int main(int argc, char** argv){
     simu.getArm()->servos()[2]->set_angle(0, -0.5*M_PI);
     //
     try {
-        //simu.next_step();
-        simu.launch(ac);
+    for(int i = 0; i < 100; i++){
+        simu.next_step();
+        sleep(0.1);
+    }
     }
     catch(int e) {
         std::cout << "[simulation] exception met !" << std::endl;
@@ -77,6 +79,14 @@ int main(int argc, char** argv){
     for (int i = 0; i < last_angles.size(); i++)
         last_angles[i] = last_angles[i] - initial_joint_values[i];
 
+    std::vector<float> start_pos = kine.forward_model(last_angles);
+
+    std::cout << "start position is ";
+    for(auto p : start_pos)
+        std::cout << p << " ";
+    std::cout << std::endl;
+
+
     kine.control_inverse_initialize(goal_pose,last_angles);
 
     float duration = kine.get_duration();
@@ -103,15 +113,31 @@ int main(int argc, char** argv){
 
         //update the simulation
         try {
-            simu.next_step();
+            for(int i = 0; i < 10; i++){
+                simu.next_step();
+                timer = timer + simu.getStep();
+            }
            }
         catch(int e) {
           std::cout << "[simulation] exception met !" << std::endl;
         }
 
         //increment the timer by the simulation step time which actually defined as 0.015 milisec, in simu.cpp via the method setStep(float time)
-        timer = timer + simu.getStep();
+
     }
+
+    for(int i = 0; i < simu.getArm()->servos().size(); i++)
+        last_angles[i] = simu.getArm()->servos()[i]->get_angle(0);
+    for (int i = 0; i < last_angles.size(); i++)
+        last_angles[i] = last_angles[i] - initial_joint_values[i];
+    std::vector<float> final_pos = kine.forward_model(last_angles);
+
+    std::cout << "final position is ";
+    for(auto p : final_pos)
+        std::cout << p << " ";
+    std::cout << std::endl;
+
+    sleep(10);
 
     dCloseODE();
 

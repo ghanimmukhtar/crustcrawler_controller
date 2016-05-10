@@ -186,16 +186,16 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
     Eigen::MatrixXd jt_p = jt.block<3, 6>(0, 0);
 
     //Part for joints limits avoidance
-    Eigen::MatrixXd Id = Eigen::VectorXd::Ones(6).asDiagonal();
+    Eigen::MatrixXd Id = Eigen::MatrixXd::Identity(6,6);
     Eigen::VectorXd Z(6);
     Eigen::VectorXd joint_val(6);
     joint_val << actual_joint_values[0]
-              , actual_joint_values[1]
-              , actual_joint_values[2]
+              , actual_joint_values[1] + initial_joint_values[1]
+              , actual_joint_values[2] + initial_joint_values[2]
               , actual_joint_values[3]
               , actual_joint_values[4]
               , actual_joint_values[5];
-    double a = -.01;
+    double a = -.5;
     double delta_j_limit = M_PI;
     Z = 2*a*joint_val/(delta_j_limit*delta_j_limit);
 
@@ -293,6 +293,8 @@ void Kinematics::goto_desired_position(std::vector<float> desired_position){
         //set joints velocities
         robot.getArm().set_joint_speeds(joints_velocity,reduced_actuator_id);
     }
+    robot.getArm().set_speeds_to_zero(reduced_actuator_id);
+
     //the end effector should be now at the desired position, so finish the program and close the crustcrawler communication bus
     robot.getArm().close_usb_controllers();
 }
