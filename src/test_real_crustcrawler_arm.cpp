@@ -8,7 +8,8 @@ int main(int argc, char **argv)
     //give the desired position you want the end effector to go to, you only need to give the three Cartesian coordinates (i.e. x, y and z)
 //    float tmp[] = {0.6, 0.0, 0.3};
 //    std::vector<float> desired_pose (tmp, tmp + 3);
-    std::vector<float> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
+    std::vector<float> pose = {static_cast<float>(atof(argv[1])), static_cast<float>(atof(argv[2])),
+                               static_cast<float>(atof(argv[3]))};
     //instantiate a variable of kinematic class
     Kinematics km;
     //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
