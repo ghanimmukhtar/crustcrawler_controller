@@ -373,6 +373,36 @@ void RobotArm::changeDValue(int val, int servo_index)
     }
 }
 
+void RobotArm::open_gripper() {
+    std::vector<float> pos(2);
+
+    std::cout << "Open the gripper" << std::endl;
+
+    std::vector<byte_t> actuators_ids(2);
+    actuators_ids[0] = 8;
+    actuators_ids[1] = 9;
+
+    pos[0] = 0;
+    pos[1] = 0;
+
+    set_joint_values(pos, actuators_ids);
+}
+
+void RobotArm::close_gripper() {
+    std::vector<float> pos(2);
+
+    std::cout << "Close the gripper" << std::endl;
+
+    std::vector<byte_t> actuators_ids(2);
+    actuators_ids[0] = 8;
+    actuators_ids[1] = 9;
+
+    pos[0] = 0.32;
+    pos[1] = -0.32;
+
+    set_joint_values(pos, actuators_ids);    
+}
+
 void RobotArm::close_usb_controllers()
 {
     getController().close_serial();

@@ -113,7 +113,18 @@ public:
 	 */
 	void close_usb_controllers();
 	
-	
+	/**
+	* @deprecated
+	* @brief Primitive function to close the gripper. It is the caller's responsibility to check if the corresponding joints are controlled in position.
+	*/
+	void open_gripper();
+
+	/**
+	* @deprecated
+	* @brief Primitive function to open the gripper. It is the caller's responsibility to check if the corresponding joints are controlled in position.
+	*/
+	void close_gripper();
+
 	// Getters / Setters
 	dynamixel::Usb2Dynamixel& getController() { return _controller; }
 	void setController(dynamixel::Usb2Dynamixel controller) { _controller = controller; }
