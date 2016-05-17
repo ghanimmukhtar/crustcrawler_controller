@@ -2,6 +2,7 @@
 #include <iostream>
 #include <typeinfo>
 
+#define EPSILON 0.0001
 
 using namespace robot;
 
@@ -289,6 +290,12 @@ void Kinematics::goto_desired_position(std::vector<float> desired_position)
         last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
     }
 
+    std::vector<float> current_effector_pos = forward_model(last_angles);
+    bool is_on_target = true;
+    for(int i = 0; i < current_effector_pos.size(); i++)
+        is_on_target = is_on_target && (EPSILON > fabs(current_effector_pos[i] - desired_position[i]));
+
+
     //initialize the inverse kinematic to get the distance to be covered
     control_inverse_initialize(desired_position, last_angles);
 
@@ -298,7 +305,7 @@ void Kinematics::goto_desired_position(std::vector<float> desired_position)
     boost::timer initial_time_here;
 
     //Then for the specified duration calculate each iteration the proper joints velocities and set them
-    while (initial_time_here.elapsed() < duration) {
+    while (initial_time_here.elapsed() < duration && !is_on_target) {
         //at each iteration get the current joint angles, as described before
         my_last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
         for (int i = 0; i < my_last_angles.size(); i++) {
@@ -312,6 +319,11 @@ void Kinematics::goto_desired_position(std::vector<float> desired_position)
         joints_velocity = control_inverse(last_angles, duration, initial_time_here.elapsed());
         //set joints velocities
         robot.getArm().set_joint_speeds(joints_velocity, reduced_actuator_id);
+
+        is_on_target = true;
+        for(int i = 0; i < current_effector_pos.size(); i++)
+            is_on_target = is_on_target && (EPSILON > fabs(current_effector_pos[i] - desired_position[i]));
+
     }
     robot.getArm().set_speeds_to_zero(reduced_actuator_id);
 

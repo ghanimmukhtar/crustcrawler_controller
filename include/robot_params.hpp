@@ -52,7 +52,7 @@ struct Params {
 
 
     // Gripper
-    static constexpr double  gripper_height = 0.095;//0.16;
+    static constexpr double  gripper_height = 0.16;//0.095;
 
     // Fingers
     static constexpr double finger_height = 0.171;
