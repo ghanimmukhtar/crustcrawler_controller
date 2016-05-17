@@ -2,7 +2,7 @@
 #include <iostream>
 #include <typeinfo>
 
-#define EPSILON 0.0001
+#define EPSILON 0.01
 
 using namespace robot;
 
@@ -15,8 +15,8 @@ Eigen::VectorXd distance(3);
 /*This defines the angles of each joint upon which the geometric parameters table was built, this means that these angles are the zero position and each joint angle should be
  * measured with reference to them
  * */
-float tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
-std::vector<float> initial_joint_values(tmp, tmp + 8);
+double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+std::vector<double> initial_joint_values(tmp, tmp + 8);
 
 //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
 unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
@@ -24,10 +24,10 @@ std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
 
 
 //geometric parameters according to the choosing initial configurations defined by initial_joint_values
-Eigen::MatrixXd Kinematics::kk_mat(const std::vector<float>& a) const
+Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
 {
     //robot description (dimensions of each link and joint)
-    float body = Params::body_height/*0.05*/,
+    double body = Params::body_height/*0.05*/,
             p1 = Params::p1_height/*0.056*/,
             p2 = Params::p2_height/*0.23*/,
             p3 = Params::p3_height /*0.155*/,
@@ -65,9 +65,9 @@ Eigen::Matrix4d Kinematics::trmat_kk(const Eigen::VectorXd& kk) const
 }
 
 //gives all intermediate transformation matrices that will be used to generate the jacobian later
-std::vector <Eigen::Matrix4d> Kinematics::sub_trmat(const std::vector<float>& a) const
+std::vector<Eigen::Matrix4d> Kinematics::sub_trmat(const std::vector<double>& a) const
 {
-    std::vector <Eigen::Matrix4d> mats;
+    std::vector<Eigen::Matrix4d> mats;
     Eigen::MatrixXd kk = kk_mat(a);
     Eigen::Matrix4d mat = Eigen::Matrix4d::Identity(4, 4);
     for (size_t i = 0; i < kk.rows(); i++) {
@@ -79,9 +79,9 @@ std::vector <Eigen::Matrix4d> Kinematics::sub_trmat(const std::vector<float>& a)
 }
 
 //the kinematic jacobian is calculated here,
-Eigen::MatrixXd Kinematics::jacobian(const std::vector<float>& a) const
+Eigen::MatrixXd Kinematics::jacobian(const std::vector<double>& a) const
 {
-    std::vector <Eigen::Matrix4d> mats = sub_trmat(a);
+    std::vector<Eigen::Matrix4d> mats = sub_trmat(a);
     Eigen::MatrixXd jacob(6, 6);
     for (int i = 0; i < mats.size(); i++) {
         /*the formulation of column (i) is as follows: J(1:3,i) = [a_i x L_i_n], and J(4:6,i) = [a_i], with (a_i) being the third column of the transformation matrix for frame (i)
@@ -99,7 +99,7 @@ Eigen::MatrixXd Kinematics::jacobian(const std::vector<float>& a) const
 void Kinematics::pseudo_inverse(const Eigen::MatrixXd& mat, Eigen::MatrixXd& invMat)
 {
     //do the singular value decomposition which will then help in solving the system jt_p*joint_velocities = desired_twist. Refer to [1] for more details.
-    Eigen::JacobiSVD <Eigen::MatrixXd> svd(mat, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(mat, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
     if (!svd.computeV() || !svd.computeU()) {
         std::cout << "impossible to compute svd" << std::endl;
@@ -127,16 +127,16 @@ void Kinematics::pseudo_inverse(const Eigen::MatrixXd& mat, Eigen::MatrixXd& inv
 *            -sin(Pitch),                                 cos(Pitch)*sin(Yaw),                                 cos(Pitch)*cos(Yaw)]
 * Refer to [1] for more details.
 * */
-std::vector<float> Kinematics::forward_model(const std::vector<float>& a) const
+std::vector<double> Kinematics::forward_model(const std::vector<double>& a) const
 {
     //first construct the geometric parameters matrix as described in Khalil-Kleinfinger notation
     Eigen::MatrixXd kk = kk_mat(a);
     //this will the transformation matrix between each joint frame and subsequent one
     Eigen::Matrix4d mat = Eigen::Matrix4d::Identity(4, 4);
     //orientation angles about X, Y and Z
-    float Roll;
-    float Pitch;
-    float Yaw;
+    double Roll;
+    double Pitch;
+    double Yaw;
 
     /* This should give the transformation matrix from the frame 0 (F0) to frame 6 (F6) which is at the end of the last actuator (let's denote it T0T6), so to get the pose of
      * the end effector in the absolute world frame two transformations need to be accounted for: first the transformation from F0 to the world absolute frame (let's call it Fw),
@@ -149,7 +149,7 @@ std::vector<float> Kinematics::forward_model(const std::vector<float>& a) const
 
     //The variable v contains the Cartesian position coordinates for the given joints angles, and they are extracted directly from T6(1:3,4)
     Eigen::VectorXd v = mat * Eigen::Vector4d(0, 0, 0, 1);
-    std::vector<float> res;
+    std::vector<double> res;
     res.push_back(v(0));
     res.push_back(v(1));
     res.push_back(v(2));
@@ -174,7 +174,7 @@ std::vector<float> Kinematics::forward_model(const std::vector<float>& a) const
 }
 
 //here is the intialization of the inverse kinematic part, where it will set-up the distance vector
-void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::vector<float> initial_joint_values)
+void Kinematics::control_inverse_initialize(std::vector<double> target_pos, std::vector<double> initial_joint_values)
 {
     //first gets the starting pose according to the starting joint angles
     initial_pos = forward_model(initial_joint_values);
@@ -192,8 +192,8 @@ void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::
  * and the duration (which will be used to produce the desired linear velocities via rtdot.
  * Refer to [1]  and "Identification and Control of Robots Part II: Control" by Wisama KHALIL [2] for more details.
  * */
-std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_values, float duration,
-                                               double current_time)
+std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint_values, double duration,
+                                                double current_time)
 {
     //get the jacobian for the current joints angles
     Eigen::MatrixXd jt(jacobian(actual_joint_values));
@@ -216,7 +216,7 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
 
 
     //this will be the output of the function, it is constructed each iteration to ensure its emptyness
-    std::vector<float> joints_velocity;
+    std::vector<double> joints_velocity;
 
     //construct the twist for current iteration
     Eigen::VectorXd desired_kinematic_twist(3);
@@ -242,10 +242,10 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
 //Guides the arm to desired position by setting joints velocities to proper values each iteration till the duration time is reached
 //for integrating the goto_desired_position method with CAFER we decided to split it into two parts: initialization part (init_motion(target)) which will be kept here, then the
 //while loop will be moved to controller_node
-void Kinematics::init_motion(std::vector<float> desired_position)
+void Kinematics::init_motion(std::vector<double> desired_position)
 {
-    std::vector<float> joints_speeds(7);
-    std::vector<float> last_angles;
+    std::vector<double> joints_speeds(7);
+    std::vector<double> last_angles;
 //    duration = d;
     Real robot;
     //set motors speed to zero so that they start from static situation
@@ -268,63 +268,67 @@ void Kinematics::init_motion(std::vector<float> desired_position)
     control_inverse_initialize(desired_position, last_angles);
 }
 
-void Kinematics::goto_desired_position(std::vector<float> desired_position)
+void Kinematics::goto_desired_position(std::vector<double> desired_position)
 {
-    std::vector<float> joints_speeds(7);
-    std::vector<float> joints_velocity, last_angles, my_last_angles;
-//    duration = d;
+    bool is_on_target;
     Real robot;
-    //set motors speed to zero so that they start from static situation
-    for (int k = 0; k < reduced_actuator_id.size(); k++) {
-        joints_speeds[k] = 0.0;
-    }
-    robot.getArm().set_joint_speeds(joints_speeds, reduced_actuator_id);
 
-    //prepare motors to receive commands in velocity (change them to wheel mode)
-    robot.getArm().mode_speed(reduced_actuator_id);
-
-    //get the feedback about current joints angles, using the method defined in RobotArm.cpp, which actually returns the angle as a fraction of (pi), so we multiply it by (pi)
-    //to get it in radian. After that we need to define it relevant to values given in initial_joint_values, as mentioned earlier.
-    last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
-    for (int i = 0; i < last_angles.size(); i++) {
-        last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
-    }
-
-    std::vector<float> current_effector_pos = forward_model(last_angles);
-    bool is_on_target = true;
-    for(int i = 0; i < current_effector_pos.size(); i++)
-        is_on_target = is_on_target && (EPSILON > fabs(current_effector_pos[i] - desired_position[i]));
-
-
-    //initialize the inverse kinematic to get the distance to be covered
-    control_inverse_initialize(desired_position, last_angles);
-
-    //perform the trajectory in the desired time:
-
-    //first initialize a timer
-    boost::timer initial_time_here;
-
-    //Then for the specified duration calculate each iteration the proper joints velocities and set them
-    while (initial_time_here.elapsed() < duration && !is_on_target) {
-        //at each iteration get the current joint angles, as described before
-        my_last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
-        for (int i = 0; i < my_last_angles.size(); i++) {
-            last_angles[i] = M_PI * my_last_angles[i] - initial_joint_values[i];
-        }
-        /*solve for current desired joints speeds, and it appears that the return speeds are actually in RPS (Revolution Per Second) rather than radian/sec, more analysis is to
-         * be carried out to see exactly why it gives this, but for the moment it simply means they don't any conversio except for converting them to RPM (Revolution Per Minute)
-         * as this what the crustcrawler motors expect as speed command, this is done in the method (set_joint_speeds()) which belongs to robotArm class
-        */
-
-        joints_velocity = control_inverse(last_angles, duration, initial_time_here.elapsed());
-        //set joints velocities
-        robot.getArm().set_joint_speeds(joints_velocity, reduced_actuator_id);
-
+    do {
         is_on_target = true;
-        for(int i = 0; i < current_effector_pos.size(); i++)
-            is_on_target = is_on_target && (EPSILON > fabs(current_effector_pos[i] - desired_position[i]));
+        std::vector<double> joints_speeds(7);
+        std::vector<double> joints_velocity, last_angles;
+//    duration = d;
+        //set motors speed to zero so that they start from static situation
+        for (int k = 0; k < reduced_actuator_id.size(); k++) {
+            joints_speeds[k] = 0.0;
+        }
+        robot.getArm().set_joint_speeds(joints_speeds, reduced_actuator_id);
 
-    }
+        //prepare motors to receive commands in velocity (change them to wheel mode)
+        robot.getArm().mode_speed(reduced_actuator_id);
+
+        //get the feedback about current joints angles, using the method defined in RobotArm.cpp, which actually returns the angle as a fraction of (pi), so we multiply it by (pi)
+        //to get it in radian. After that we need to define it relevant to values given in initial_joint_values, as mentioned earlier.
+        last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
+        for (int i = 0; i < last_angles.size(); i++) {
+            last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
+        }
+
+        std::vector<double> current_effector_pos = forward_model(last_angles);
+
+        for (int i = 0; i < 3; i++) {
+            std::cout << current_effector_pos[i] << " ";
+            is_on_target = is_on_target && (EPSILON > fabs(current_effector_pos[i] - desired_position[i]));
+        }
+        std::cout << std::endl;
+
+
+        //initialize the inverse kinematic to get the distance to be covered
+        control_inverse_initialize(desired_position, last_angles);
+
+        //perform the trajectory in the desired time:
+
+        //first initialize a timer
+        boost::timer initial_time_here;
+        //Then for the specified duration calculate each iteration the proper joints velocities and set them
+        while (initial_time_here.elapsed() < duration) {
+            /*solve for current desired joints speeds, and it appears that the return speeds are actually in RPS (Revolution Per Second) rather than radian/sec, more analysis is to
+             * be carried out to see exactly why it gives this, but for the moment it simply means they don't any conversio except for converting them to RPM (Revolution Per Minute)
+             * as this what the crustcrawler motors expect as speed command, this is done in the method (set_joint_speeds()) which belongs to robotArm class
+            */
+
+            joints_velocity = control_inverse(last_angles, duration, initial_time_here.elapsed());
+            //set joints velocities
+            robot.getArm().set_joint_speeds(joints_velocity, reduced_actuator_id);
+
+            //at each iteration get the current joint angles, as described before
+            last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
+            for (int i = 0; i < last_angles.size(); i++) {
+                last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
+            }
+        }
+    } while (!is_on_target);
+
     robot.getArm().set_speeds_to_zero(reduced_actuator_id);
 
     //the end effector should be now at the desired position, so finish the program and close the crustcrawler communication bus
@@ -332,11 +336,11 @@ void Kinematics::goto_desired_position(std::vector<float> desired_position)
 }
 
 //Guides the real arm to desired joints angles by setting joints velocities to proper values each iteration till the duration time is reached
-void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<float> desired_joints_angles)
+void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<double> desired_joints_angles)
 {
     //this will be the velocity command send to the joints
-    std::vector<float> joints_velocity(6), angles_distance(6);
-    std::vector<float> joints_speeds(7);
+    std::vector<double> joints_velocity(6), angles_distance(6);
+    std::vector<double> joints_speeds(7);
 
     //instantiate a robot class to use for controlling the arm
     Real robot;
@@ -344,13 +348,13 @@ void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<float> des
     /* get the distance to be covered by each joint by reading the current position and then subtract from it the desired joints angles
      * */
     /***************************check the distances may be they aren't what they supposed to be ********/
-    std::vector<float> starting_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
+    std::vector<double> starting_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
     for (int i = 0; i < 6; i++) {
         angles_distance[i] = desired_joints_angles[i] - M_PI * starting_angles[i];
     }
 
     //set the time, in seconds, to complete the trajectory in joints space
-    float duration = 8;
+    double duration = 8;
 
     //set motors speed to zero so that they start from static situation
     for (int k = 0; k < reduced_actuator_id.size(); k++) {
@@ -364,8 +368,8 @@ void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<float> des
     //perform the trajectory in the desired time:
 
     //instantiate the interpolation parameter
-    float rtdot;
-    float time_passed = 0;
+    double rtdot;
+    double time_passed = 0;
     // first initialize a timer:
     boost::timer time_here;
 
@@ -396,10 +400,10 @@ void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<float> des
 }
 
 //Guides the real arm to desired joints angles using position mode but limiting the velocity by which actuators goes to these angles
-void Kinematics::goto_desired_joints_angles_position_mode(std::vector<float> desired_joints_angles)
+void Kinematics::goto_desired_joints_angles_position_mode(std::vector<double> desired_joints_angles)
 {
     //this will be the velocity command send to the joints
-    std::vector<float> joints_speeds(7);
+    std::vector<double> joints_speeds(7);
 
     //instantiate a robot class to use for controlling the arm
     Real robot;
@@ -415,7 +419,7 @@ void Kinematics::goto_desired_joints_angles_position_mode(std::vector<float> des
     robot.getArm().set_joint_speeds(joints_speeds, reduced_actuator_id);
 
     robot.getArm().set_joint_values(desired_joints_angles, reduced_actuator_id);
-    std::vector<float> finishing_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
+    std::vector<double> finishing_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
     for (int i = 0; i < 6; i++) {
         std::cout << "finishing angle for joint: " << i << " is: " << M_PI * finishing_angles[i] << std::endl;
     }
@@ -426,8 +430,8 @@ void Kinematics::goto_desired_joints_angles_position_mode(std::vector<float> des
 //starting from the current position of the end effector this method will make the end effector goes for small distance in a forward sense
 void Kinematics::primitive_motion()
 {
-    std::vector<float> current_angles, current_position, target_position(3);
-    float prim_distance = 0.05; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
+    std::vector<double> current_angles, current_position, target_position(3);
+    double prim_distance = 0.05; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
     Real robot;
 
     //get the current position, by getting current joint angles and then passing them to the forward model

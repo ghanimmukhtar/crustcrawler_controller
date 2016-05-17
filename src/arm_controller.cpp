@@ -43,12 +43,12 @@ void Arm_controller::showRealController()
     std::cout << std::endl;
 }
 
-void Arm_controller::addWaypoint(std::vector<float> step)
+void Arm_controller::addWaypoint(std::vector<double> step)
 {
     // To avoid many wrist explosion, has to reduce its rotation to [0.1 - 0.9] (was [0 - 1])
     step[5] *= 0.8;
     step[5] += 0.1;
-    float val = step[6];
+    double val = step[6];
     if (val >= 0.5) { // If gripper has to open itself
         step[6] = 0.25;
         step.push_back(0.75);
@@ -101,7 +101,7 @@ void Arm_controller::adaptToReality()
         setWaypoint(joint_values, i);
     }
 
-    std::vector<float> org;
+    std::vector<double> org;
     for (int i(0); i < 6; i++) {
         org.push_back(0.0f);
     }
@@ -110,22 +110,22 @@ void Arm_controller::adaptToReality()
     setOrigin(org);
 }
 
-float Arm_controller::getMoveTime(waypoint a, waypoint b, float speed)
+double Arm_controller::getMoveTime(waypoint a, waypoint b, double speed)
 {
-    std::vector<float> distances;
+    std::vector<double> distances;
     for (int i(0); i < a.step.size(); i++) {
         distances.push_back(fabs(a.step[i] - b.step[i]));
     }
-    float maxDist = *std::max_element(distances.begin(), distances.end());
+    double maxDist = *std::max_element(distances.begin(), distances.end());
 
     return maxDist / speed;
 }
 
-float Arm_controller::findVariance()
+double Arm_controller::findVariance()
 {
-    std::vector<float> variance;
+    std::vector<double> variance;
     for (int i(0); i < getNbWaypoints(); i++) {
-        std::vector<float> v;
+        std::vector<double> v;
         for (int j(1); j < 5; j++) {
             v.push_back(getWaypoint(i).step[j]);
         }
@@ -135,16 +135,16 @@ float Arm_controller::findVariance()
     return _mean(variance);
 }
 
-int Arm_controller::_sign(float a)
+int Arm_controller::_sign(double a)
 {
     if (a < 0) { return -1; }
     else if (a == 0) { return 0; }
     else { return 1; }
 }
 
-std::vector<float> Arm_controller::_getVector(float val)
+std::vector<double> Arm_controller::_getVector(double val)
 {
-    std::vector<float> v;
+    std::vector<double> v;
     for (int i(0); i < 6; i++) {
         v.push_back(val);
     }
@@ -153,22 +153,22 @@ std::vector<float> Arm_controller::_getVector(float val)
     return v;
 }
 
-float Arm_controller::_variance(std::vector<float> v)
+double Arm_controller::_variance(std::vector<double> v)
 {
-    float cpt = 0;
-    float mean = _mean(v);
+    double cpt = 0;
+    double mean = _mean(v);
     for (int i(0); i < v.size(); i++) {
         cpt += v[i] * v[i];
     }
-    cpt /= float(v.size());
+    cpt /= double(v.size());
     return cpt - mean * mean;
 }
 
-float Arm_controller::_mean(std::vector<float> v)
+double Arm_controller::_mean(std::vector<double> v)
 {
-    float cpt = 0;
+    double cpt = 0;
     for (int i(0); i < v.size(); i++) {
         cpt += v[i];
     }
-    return cpt / float(v.size());
+    return cpt / double(v.size());
 }

@@ -10,7 +10,7 @@ namespace ode {
 		_init(true);
 		setTableTouched(false);
 	}
-	Environment_arm::Environment_arm(float angle) : _internal_collision(false) {
+	Environment_arm::Environment_arm(double angle) : _internal_collision(false) {
 		_init(true, angle);
 		setTableTouched(false);
 	}
@@ -21,14 +21,14 @@ namespace ode {
 	}
 	Environment_arm::Environment_arm::~Environment_arm() {}
 	
-	void Environment_arm::add_table(ode::Environment_arm& env, float tableLength, float tableWidth, float tableHeight, Eigen::Vector3d pos) {
+	void Environment_arm::add_table(ode::Environment_arm& env, double tableLength, double tableWidth, double tableHeight, Eigen::Vector3d pos) {
 		Object::ptr_t p(new Box(env, pos, 20, tableLength, tableWidth, tableHeight));
 		getTable().push_back(p);
 		p->fix();
 		env.add_env_object(*p);
 	}
 	
-	void Environment_arm::add_cube(Environment_arm& env, Eigen::Vector3d pos, float size, float mass, float rotation) {
+	void Environment_arm::add_cube(Environment_arm& env, Eigen::Vector3d pos, double size, double mass, double rotation) {
 		pos[2] += size/2;
 		Object::ptr_t p(new Box(env, pos, mass, size, size, size));
 		dMatrix3 R;
@@ -38,7 +38,7 @@ namespace ode {
 		env.add_env_object(*p);
 	}
 
-	void Environment_arm::add_basket(int i, Environment_arm& env, Eigen::Vector3d pos, float length, float width, float height, float thickness) {
+	void Environment_arm::add_basket(int i, Environment_arm& env, Eigen::Vector3d pos, double length, double width, double height, double thickness) {
 		static const double mass(0.2);
 		std::vector<Object::ptr_t> p;
 		

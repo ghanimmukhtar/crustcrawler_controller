@@ -40,7 +40,7 @@ public:
 	 * @param goal position in joint space in fraction of PI
 	 * @return a vector of vector of joint values in fraction of PI
 	 */
-	std::vector<std::vector<float> > getWaypoints(waypoint target, std::vector<byte_t> actuator_ids = std::vector<byte_t>());
+	std::vector<std::vector<double> > getWaypoints(waypoint target, std::vector<byte_t> actuator_ids = std::vector<byte_t>());
 	
 	/**
 	 * @brief wait for the stabilization of the arm
@@ -48,14 +48,14 @@ public:
 	 * @param the target to reached
 	 * @param the intensity of the stabilization
 	 */
-	void stabilizeArm(RobotArm arm, std::vector<float> destination, int intensity);
+	void stabilizeArm(RobotArm arm, std::vector<double> destination, int intensity);
 	
 	
 	// Getters / Setters
-	float getStep() { return _step; }
-	void setStep(float step) { _step = step; }
-	float getSpeed() { return _speed; }
-	void setSpeed(float speed) { _speed = speed; }
+	double getStep() { return _step; }
+	void setStep(double step) { _step = step; }
+	double getSpeed() { return _speed; }
+	void setSpeed(double speed) { _speed = speed; }
 	
 	RobotArm& getArm() { return _arm; }
 	void setArm(RobotArm arm) { _arm = arm; }
@@ -65,8 +65,8 @@ public:
 	
 private:
 	
-	float _step;
-	float _speed;
+	double _step;
+	double _speed;
 	
 	RobotArm _arm;
 	Arm_controller _ac;

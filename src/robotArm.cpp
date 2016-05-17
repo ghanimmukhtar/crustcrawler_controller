@@ -110,11 +110,11 @@ void RobotArm::enable()
     }
 }
 
-std::vector<float> RobotArm::get_joint_values(std::vector <byte_t> actuators_ids)
+std::vector<double> RobotArm::get_joint_values(std::vector <byte_t> actuators_ids)
 {
     bool error = false;
     unsigned int j;
-    std::vector<float> current_pos;
+    std::vector<double> current_pos;
     std::vector<int> current_pos_step_per_turn;
     if (actuators_ids.empty()) {
         actuators_ids = getActuatorsIds();
@@ -153,11 +153,11 @@ std::vector<float> RobotArm::get_joint_values(std::vector <byte_t> actuators_ids
 }
 
 //For the acutatros defined in actuators_ids vector, returns their speed in RPS (Revolution Per Second)
-std::vector<float> RobotArm::get_joint_speeds(std::vector <byte_t> actuators_ids)
+std::vector<double> RobotArm::get_joint_speeds(std::vector <byte_t> actuators_ids)
 {
     bool error = false;
     unsigned int j;
-    std::vector<float> current_speed;
+    std::vector<double> current_speed;
     std::vector<int> current_speed_rpm;
     if (actuators_ids.empty()) {
         actuators_ids = getActuatorsIds();
@@ -199,7 +199,7 @@ std::vector<float> RobotArm::get_joint_speeds(std::vector <byte_t> actuators_ids
     return current_speed;
 }
 
-bool RobotArm::set_joint_values(std::vector<float> values, std::vector <byte_t> actuators_ids)
+bool RobotArm::set_joint_values(std::vector<double> values, std::vector <byte_t> actuators_ids)
 {
     if (actuators_ids.empty()) {
         actuators_ids = getActuatorsIds();
@@ -208,7 +208,7 @@ bool RobotArm::set_joint_values(std::vector<float> values, std::vector <byte_t> 
         std::vector<int> pos(actuators_ids.size());
 
         int i(0);
-        for (std::vector<float>::iterator it = values.begin(); it != values.end(); it++) {
+        for (std::vector<double>::iterator it = values.begin(); it != values.end(); it++) {
             if (actuators_ids[i] < 8) {
                 pos[i] = rad_to_stepperturn_MX(*it);
                 if (actuators_ids[i] == 2) {
@@ -241,19 +241,19 @@ bool RobotArm::set_joint_values(std::vector<float> values, std::vector <byte_t> 
 }
 
 //Sets the speed of the joints defined in actuators_ids to the corresponding velocities given in values
-bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector <byte_t> actuators_ids)
+bool RobotArm::set_joint_speeds(std::vector<double> values, std::vector <byte_t> actuators_ids)
 {
 
     if (actuators_ids.empty()) {
         actuators_ids = getActuatorsIds();
     }
     try {
-        float speed_value;
+        double speed_value;
         std::vector<int> vel(actuators_ids.size());
         std::vector<bool> dir(actuators_ids.size());
 
         int i(0);
-        for (std::vector<float>::iterator it = values.begin(); it != values.end(); it++) {
+        for (std::vector<double>::iterator it = values.begin(); it != values.end(); it++) {
             //convert the speed from rps to rpm
             speed_value = rps_to_rpm(*it);
             /*set safety limits for speed (it is set arbitrary to 100 RPM but the user can change it as needed). An important note is that the duration of the trajectory
@@ -305,7 +305,7 @@ bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector <byte_t> 
 
 bool RobotArm::set_speeds_to_zero(std::vector <byte_t> actuators_ids)
 {
-    std::vector<float> joints_speeds(actuators_ids.size(), 0.0);
+    std::vector<double> joints_speeds(actuators_ids.size(), 0.0);
     return set_joint_speeds(joints_speeds, actuators_ids);
 }
 
@@ -394,7 +394,7 @@ void RobotArm::changeDValue(int val, int servo_index)
 
 void RobotArm::open_gripper()
 {
-    std::vector<float> pos(2);
+    std::vector<double> pos(2);
 
     std::cout << "Open the gripper" << std::endl;
 
@@ -410,7 +410,7 @@ void RobotArm::open_gripper()
 
 void RobotArm::close_gripper()
 {
-    std::vector<float> pos(2);
+    std::vector<double> pos(2);
 
     std::cout << "Close the gripper" << std::endl;
 

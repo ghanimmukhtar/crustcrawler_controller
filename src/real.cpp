@@ -64,7 +64,7 @@ void Real::toSleepPosition()
     std::cout << "[real_arm] go to sleep position" << std::endl;
 
     waypoint sleep;
-    std::vector<float> pos(8);
+    std::vector<double> pos(8);
     pos[0] = 0.2;
     pos[1] = 0.1;
     pos[2] = 0.35;
@@ -86,12 +86,12 @@ void Real::toOrigin()
     std::cout << "[real_arm] go to origin" << std::endl;
 
     waypoint origin;
-    std::vector<float> pos;
+    std::vector<double> pos;
     for (int i(0); i < 6; i++) {
         pos.push_back(0);
     }
-    pos.push_back(0.15f);
-    pos.push_back(-0.15f);
+    pos.push_back(0.15);
+    pos.push_back(-0.15);
     origin.step = pos;
     origin.fingersValue = 0;
 
@@ -105,7 +105,7 @@ bool Real::goTo(waypoint target, std::vector <byte_t> actuators_ids)
         actuators_ids = getArm().getActuatorsIds();
     }
 
-    std::vector <std::vector<float>> waypoints;
+    std::vector <std::vector<double>> waypoints;
     waypoints = getWaypoints(target, actuators_ids);
 
     for (int i(0); i < waypoints.size(); i++) {
@@ -117,19 +117,19 @@ bool Real::goTo(waypoint target, std::vector <byte_t> actuators_ids)
     return true;
 }
 
-std::vector <std::vector<float>> Real::getWaypoints(waypoint target, std::vector <byte_t> actuator_ids)
+std::vector <std::vector<double>> Real::getWaypoints(waypoint target, std::vector <byte_t> actuator_ids)
 {
 
     waypoint start;
     start.step = getArm().get_joint_values(actuator_ids);
     start.fingersValue = 0;
-    float moveTime(getAC().getMoveTime(start, target, getSpeed()));
+    double moveTime(getAC().getMoveTime(start, target, getSpeed()));
 
-    std::vector <std::vector<float>> waypoints;
-    std::vector<float> final_pos(start.step.size());
+    std::vector <std::vector<double>> waypoints;
+    std::vector<double> final_pos(start.step.size());
     bool fingersDone(false);
-    for (float t(0); t <= moveTime; t += getStep()) {
-        waypoints.push_back(std::vector<float>());
+    for (double t(0); t <= moveTime; t += getStep()) {
+        waypoints.push_back(std::vector<double>());
         for (int i(0); i < start.step.size() - 2; i++) {
             final_pos[i] = start.step[i] + (target.step[i] - start.step[i]) / moveTime * (t/*+getStep()*/);
             waypoints.back().push_back(start.step[i] + (target.step[i] - start.step[i]) / moveTime * (t/*+getStep()*/));
@@ -153,13 +153,13 @@ std::vector <std::vector<float>> Real::getWaypoints(waypoint target, std::vector
     return waypoints;
 }
 
-void Real::stabilizeArm(RobotArm arm, std::vector<float> destination, int intensity)
+void Real::stabilizeArm(RobotArm arm, std::vector<double> destination, int intensity)
 {
     int cpt(0);
-    std::vector<float> prev = arm.get_joint_values();
+    std::vector<double> prev = arm.get_joint_values();
 
     while (cpt < intensity) {
-        std::vector<float> curr = arm.get_joint_values();
+        std::vector<double> curr = arm.get_joint_values();
 
         bool ok(true);
         for (int j(0); j < curr.size(); j++) {

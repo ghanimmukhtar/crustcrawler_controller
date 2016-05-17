@@ -88,7 +88,7 @@ struct Params {
 //    static const char* dynamixel_serial = "/dev/ttyUSB0";
     static constexpr double MX_step_per_turn = 4096.0;
     static constexpr double AX_step_per_turn = 1024.0;
-    static constexpr float read_duration = 0.02f;
+    static constexpr double read_duration = 0.02f;
 };
 
 }

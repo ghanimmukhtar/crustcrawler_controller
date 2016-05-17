@@ -22,7 +22,7 @@ namespace ode {
 	public:
 			
 		Environment_arm();
-		Environment_arm(float angle);
+		Environment_arm(double angle);
 		Environment_arm(const Environment_arm& env);
 		~Environment_arm();
 		
@@ -35,7 +35,7 @@ namespace ode {
 		 * @param height of the table
 		 * @param position of the table
 		 */
-		void add_table(ode::Environment_arm& env, float tableLength, float tableWidth, float tableHeight, Eigen::Vector3d pos);
+		void add_table(ode::Environment_arm& env, double tableLength, double tableWidth, double tableHeight, Eigen::Vector3d pos);
 		
 		/**
 		 * @brief add the cube to the environment
@@ -45,7 +45,7 @@ namespace ode {
 		 * @param mass of the cube
 		 * @param rotation of the cube
 		 */
-		void add_cube(ode::Environment_arm& env, Eigen::Vector3d pos, float size, float mass, float rotation);
+		void add_cube(ode::Environment_arm& env, Eigen::Vector3d pos, double size, double mass, double rotation);
 		
 		/**
 		 * @brief add the baskets to the environment
@@ -56,7 +56,7 @@ namespace ode {
 		 * @param height of a basket
 		 * @param thickness of a basket
 		 */
-		void add_basket(int i, ode::Environment_arm& env, Eigen::Vector3d pos, float length, float width, float height, float thickness);
+		void add_basket(int i, ode::Environment_arm& env, Eigen::Vector3d pos, double length, double width, double height, double thickness);
 		
 		/**
 		 * @brief permits to recover the position of the cube

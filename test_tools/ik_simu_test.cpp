@@ -22,15 +22,15 @@ int main(int argc, char **argv)
 
     Data d;
 
-    float tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
-    std::vector<float> initial_joint_values(tmp, tmp + 8);
+    double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> initial_joint_values(tmp, tmp + 8);
 
 
     //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
     unsigned char actuators_id[] = {1, 2, 3, 4, 5, 6, 7};
     std::vector<unsigned char> reduced_actuator_id(actuators_id, actuators_id + 7);
 
-    std::vector<float> goal_pose(3);
+    std::vector<double> goal_pose(3);
     goal_pose[0] = atof(argv[1]);
     goal_pose[1] = atof(argv[2]);
     goal_pose[2] = atof(argv[3]);
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     }
 
 
-    std::vector<float> last_angles(8), joints_velocity(7);
+    std::vector<double> last_angles(8), joints_velocity(7);
 
 
     Kinematics kine;
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
         last_angles[i] = last_angles[i] - initial_joint_values[i];
     }
 
-    std::vector<float> start_pos = kine.forward_model(last_angles);
+    std::vector<double> start_pos = kine.forward_model(last_angles);
 
     std::cout << "start position is ";
     for (auto p : start_pos) {
@@ -97,11 +97,11 @@ int main(int argc, char **argv)
 
     kine.control_inverse_initialize(goal_pose, last_angles);
 
-    float duration = kine.get_duration();
+    double duration = kine.get_duration();
 
     std::cout << duration << std::endl;
 
-    float timer = 0.0;
+    double timer = 0.0;
 
     while (timer < duration) {
 
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
             std::cout << "[simulation] exception met !" << std::endl;
         }
 
-        //increment the timer by the simulation step time which actually defined as 0.015 milisec, in simu.cpp via the method setStep(float time)
+        //increment the timer by the simulation step time which actually defined as 0.015 milisec, in simu.cpp via the method setStep(double time)
 
     }
 
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < last_angles.size(); i++) {
         last_angles[i] = last_angles[i] - initial_joint_values[i];
     }
-    std::vector<float> final_pos = kine.forward_model(last_angles);
+    std::vector<double> final_pos = kine.forward_model(last_angles);
 
     std::cout << "final position is ";
     for (auto p : final_pos) {

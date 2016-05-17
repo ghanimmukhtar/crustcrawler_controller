@@ -6,7 +6,7 @@ Simu::Simu(Data d) {
     init(d);
 }
 
-Simu::Simu(Data d, float cube_x, float cube_y, float rotationCoeff){
+Simu::Simu(Data d, double cube_x, double cube_y, double rotationCoeff){
     init(d,cube_x,cube_y,rotationCoeff);
 }
 
@@ -14,7 +14,7 @@ Simu::~Simu() {
 	
 }
 
-void Simu::init(Data d, float cube_x, float cube_y, float rotationCoeff){
+void Simu::init(Data d, double cube_x, double cube_y, double rotationCoeff){
 
     cube_touched = false;
 
@@ -141,7 +141,7 @@ bool Simu::stabilizeCube(int intensity) {
 
 waypoint Simu::getCurrentPos() {
 	waypoint current;
-	std::vector<float> tmp;
+	std::vector<double> tmp;
 	for(int i(0) ; i < getArm()->servos().size() ; i++) {
 		tmp.push_back((getArm()->servos()[i]->get_angle(0)/M_PI)+0.5);
 	}
@@ -159,20 +159,20 @@ void Simu::goToWaypoint(Arm_controller ac, waypoint target) {
 	bool fingersDone(false);
 	
 	waypoint current = getCurrentPos();
-	float moveTime(ac.getMoveTime(current, target, getSpeed()));
-    float start_time = 0;
+	double moveTime(ac.getMoveTime(current, target, getSpeed()));
+    double start_time = 0;
     if(!_arm_trajectory.empty()){
-        std::map<float, std::vector<float> >::iterator it = _arm_trajectory.end();
+        std::map<double, std::vector<double> >::iterator it = _arm_trajectory.end();
         it--;
         start_time = it->first;
     }
 	Eigen::Vector3d initCubePos(getEnv()->getCubePos());
 	
 	// The motor that reached the longest distance is the reference : all the other motors has to do their move in the same time
-	for (float t(0) ; t < moveTime ; t += getStep()) {
+	for (double t(0) ; t < moveTime ; t += getStep()) {
         for(int i(0) ; i < getArm()->servos().size()-nbOfServosForFingers ; i++) {
-			float prevAngle(M_PI*(current.step[i]-0.5)), currAngle(M_PI*(target.step[i]-0.5));
-			float newAngle(prevAngle + (currAngle-prevAngle)/moveTime*(t+getStep()));
+			double prevAngle(M_PI*(current.step[i]-0.5)), currAngle(M_PI*(target.step[i]-0.5));
+			double newAngle(prevAngle + (currAngle-prevAngle)/moveTime*(t+getStep()));
             getArm()->servos()[i]->set_angle(0, newAngle);
 		}
 		
@@ -180,13 +180,13 @@ void Simu::goToWaypoint(Arm_controller ac, waypoint target) {
 		if(!fingersDone && (t/moveTime > target.fingersValue || t+getStep() >= moveTime)) {
 			for(int i(0) ; i < nbOfFingers ; i++) {
 				int posServo = getArm()->servos().size() - nbOfServosForFingers + 1;
-				float currAngle(M_PI*(target.step[6+i]-0.5));
+				double currAngle(M_PI*(target.step[6+i]-0.5));
 				getArm()->servos()[posServo + nbOfServosByFingers*i - 1]->set_angle(0, currAngle);
 			}
 			fingersDone = true;
 		}
 
-        std::vector<float> currentAngles;
+        std::vector<double> currentAngles;
         for(int i = 0; i < getArm()->servos().size();i++)
             currentAngles.push_back(getArm()->servos()[i]->get_angle(0));
 
@@ -205,18 +205,18 @@ void Simu::goToWaypoint(Arm_controller ac, waypoint target) {
         if(getEffectorAngle() == -1 && (fabs(Params_Simu::cube::dist_arm_x-pos[0]) > 1e-3 ||
                                         fabs(Params_Simu::cube::dist_arm_y-pos[1]) > 1e-3 ||
                                         fabs(Params_Simu::cube::dist_arm_z-pos[2]) > 1e-3)) {
-			float sum = 0;
+			double sum = 0;
 			for(int i(1) ; i < getArm()->servos().size()-nbOfServosForFingers-1 ; i++) {
-				sum += getArm()->servos()[i]->get_angle(0)/float(M_PI);
+				sum += getArm()->servos()[i]->get_angle(0)/double(M_PI);
 			}
-			sum = round((sum*(-1))*1e3)/float(1e3) - 0.5;
+			sum = round((sum*(-1))*1e3)/double(1e3) - 0.5;
 			if(sum < 0) sum = 0;
 			else if(sum > 1) sum = 1;
 			setEffectorAngle(sum);
 			
-			float wrist(getArm()->servos()[getArm()->servos().size()-nbOfServosForFingers-1]->get_angle(0)/float(M_PI) + 0.5);
+			double wrist(getArm()->servos()[getArm()->servos().size()-nbOfServosForFingers-1]->get_angle(0)/double(M_PI) + 0.5);
 			wrist = (wrist - 0.1) / 0.8f;
-			wrist = round(wrist*1e3)/float(1e3);
+			wrist = round(wrist*1e3)/double(1e3);
 			if(wrist < 0) wrist = 0;
 			else if(wrist > 1) wrist = 1;
 			setWristAngle(wrist);
@@ -230,7 +230,7 @@ void Simu::goToWaypoint(Arm_controller ac, waypoint target) {
         }
         else currentAngles.push_back(0);
 
-        _arm_trajectory.insert(std::make_pair/*<float, std::vector<float> >*/(t + start_time,currentAngles));
+        _arm_trajectory.insert(std::make_pair/*<double, std::vector<double> >*/(t + start_time,currentAngles));
 
 	}
 
