@@ -6,12 +6,12 @@
 int main(int argc, char **argv)
 {
     //give the desired position you want the end effector to go to, you only need to give the three Cartesian coordinates (i.e. x, y and z)
-//    float tmp[] = {0.6, 0.0, 0.3};
-//    std::vector<float> desired_pose (tmp, tmp + 3);
-    std::vector<float> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
+//    double tmp[] = {0.6, 0.0, 0.3};
+//    std::vector<double> desired_pose (tmp, tmp + 3);
+    std::vector<double> pose = {atof(argv[1]), atof(argv[2]), atof(argv[3])};
     //instantiate a variable of kinematic class
     Kinematics km;
-    //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
+    //use the method goto_desired_position(std::vector<double> target_position) to guide the end effector to the desired position
     km.goto_desired_position(pose);
 
 //    //make the robot alternate between two positions (pos_1 = {0.6, 0.0, 0.3} & pos_2 = {0.42, 0.42 0.3})

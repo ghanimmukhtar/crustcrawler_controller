@@ -5,27 +5,28 @@
 #include <fstream>
 
 
-RobotArm::RobotArm() {
-	setCrash(false);
-	setErrors(0);
+RobotArm::RobotArm()
+{
+    setCrash(false);
+    setErrors(0);
     init();
 }
 
-RobotArm::~RobotArm() {
+RobotArm::~RobotArm()
+{
     std::cout << "i m dying" << std::endl;
 //	relax();
 }
 
-void RobotArm::init(){
+void RobotArm::init()
+{
     try {
-
-
         getController().open_serial(DYNAMIXELSERIAL, B1000000);
 
         // Scan actuators IDs
         getController().scan_ax12s();
 
-        const std::vector<byte_t>& ax12_ids = getController().ax12_ids();
+        const std::vector <byte_t>& ax12_ids = getController().ax12_ids();
         if (!ax12_ids.size()) {
             std::cerr << "[real_arm] no dynamixel detected" << std::endl;
             setCrash(true);
@@ -62,223 +63,274 @@ void RobotArm::init(){
 
 }
 
-void RobotArm::reset() {
-	try {
-		if(!getController().isOpen()) {
-			std::cout << "[real_arm] re-opening dynamixel's serial" << std::endl;
-			getController().open_serial(DYNAMIXELSERIAL, B1000000);
-		}
-		getController().flush();
-	}
-	catch (dynamixel::Error e) {
-		std::cerr << "[real_arm] error (dynamixel): " << e.msg() << std::endl;
-		setCrash(true);
-		return;
-	}
+void RobotArm::reset()
+{
+    try {
+        if (!getController().isOpen()) {
+            std::cout << "[real_arm] re-opening dynamixel's serial" << std::endl;
+            getController().open_serial(DYNAMIXELSERIAL, B1000000);
+        }
+        getController().flush();
+    }
+    catch (dynamixel::Error e) {
+        std::cerr << "[real_arm] error (dynamixel): " << e.msg() << std::endl;
+        setCrash(true);
+        return;
+    }
 
-	enable();
+    enable();
 }
 
-void RobotArm::relax() {
-	try {
-		for (size_t i(0) ; i < getActuatorsIds().size() ; ++i) {
-			getController().send(dynamixel::ax12::TorqueEnable(getActuatorsIds()[i], false));
-			getController().recv(Parameters::read_duration, getStatus());
-		}
-	} catch(dynamixel::Error e) {
-		std::cerr << "[real_arm] dynamixel error : " << e.msg() << std::endl;
-	}
-}
-
-void RobotArm::enable() {
-	try {
-		std::cout << "[real_arm] enable motor..." << std::endl;
-		for(size_t i(0) ; i < getActuatorsIds().size() ; ++i) {
-			getController().send(dynamixel::ax12::TorqueEnable(getActuatorsIds()[i], true));
-			getController().recv(Parameters::read_duration, getStatus());
-		}
-		
-		usleep(1e5);
-	} catch(dynamixel::Error e) {
-		std::cerr << "[real_arm] dynamixel error : " << e.msg() << std::endl;
-	}
-}
-
-std::vector<float> RobotArm::get_joint_values(std::vector<byte_t> actuators_ids) {
-	std::vector<float> current_pos;
-	std::vector<int> current_pos_step_per_turn;
-	if(actuators_ids.empty())
-		actuators_ids = getActuatorsIds();
-
-	for (size_t i(0) ; i < actuators_ids.size() ; i++) {
-		try {
-			getController().send(dynamixel::ax12::GetPosition(actuators_ids[i]));
-			getController().recv(Parameters::read_duration, getStatus());
-			current_pos_step_per_turn.push_back(getStatus().decode16());
-
-			if(actuators_ids[i] < 8 && actuators_ids[i] != 2)
-				current_pos.push_back(MX_stepperturn_to_rad(current_pos_step_per_turn[i]));
-			else if(actuators_ids[i] >= 8)
-				current_pos.push_back(AX_stepperturn_to_rad(current_pos_step_per_turn[i]));
-		} catch(dynamixel::Error e) {
-			std::cerr << "[real_arm] get joint values : error :" << e.msg() << std::endl;
-            exit(1);
-			return std::vector<float>(1, 100);
-		}
-	}
-		usleep(1e3);
-
-	return current_pos;
-}
-//For the acutatros defined in actuators_ids vector, returns their speed in RPS (Revolution Per Second)
-std::vector<float> RobotArm::get_joint_speeds(std::vector<byte_t> actuators_ids) {
-    std::vector<float> current_speed;
-    std::vector<int> current_speed_rpm;
-    if(actuators_ids.empty())
-        actuators_ids = getActuatorsIds();
-
-    for (size_t i(0) ; i < actuators_ids.size() ; i++) {
-        try {
-            /*dynamixel method that reads the speed, it returns the speed in RPM (Revolution Per Minute), furthermore, the value is interpreted in a certain way: all values from
-             * 0 to 1023 represents positive velocities (counter-clockwise rotation), while the values from 1024 to 2047 represents the negative velocities (clockwise) with 1024
-             * being the zero in this sense.
-            */
-            getController().send(dynamixel::ax12::GetSpeed(actuators_ids[i]));
+void RobotArm::relax()
+{
+    try {
+        for (size_t i(0); i < getActuatorsIds().size(); ++i) {
+            getController().send(dynamixel::ax12::TorqueEnable(getActuatorsIds()[i], false));
             getController().recv(Parameters::read_duration, getStatus());
-            current_speed_rpm.push_back(getStatus().decode16());
-
-            //convert the RPM to RPS with the proper sign ("+" for counter-clockwise and "-" for clockwise rotation)
-            if(actuators_ids[i] < 8 && actuators_ids[i] != 2){
-                if (current_speed_rpm[i] < 1024)
-                    current_speed.push_back(rpm_to_rps(current_speed_rpm[i]));
-                else current_speed.push_back(-1*rpm_to_rps(current_speed_rpm[i]-1024));
-            }
-        } catch(dynamixel::Error e) {
-            std::cerr << "[real_arm] get joint values : error :" << e.msg() << std::endl;
-            exit(1);
-            return std::vector<float>(1, 100);
         }
     }
-        usleep(1e3);
+    catch (dynamixel::Error e) {
+        std::cerr << "[real_arm] dynamixel error : " << e.msg() << std::endl;
+    }
+}
+
+void RobotArm::enable()
+{
+    try {
+        std::cout << "[real_arm] enable motor..." << std::endl;
+        for (size_t i(0); i < getActuatorsIds().size(); ++i) {
+            getController().send(dynamixel::ax12::TorqueEnable(getActuatorsIds()[i], true));
+            getController().recv(Parameters::read_duration, getStatus());
+        }
+
+        usleep(1e5);
+    }
+    catch (dynamixel::Error e) {
+        std::cerr << "[real_arm] dynamixel error : " << e.msg() << std::endl;
+    }
+}
+
+std::vector<double> RobotArm::get_joint_values(std::vector <byte_t> actuators_ids)
+{
+    bool error = false;
+    unsigned int j;
+    std::vector<double> current_pos;
+    std::vector<int> current_pos_step_per_turn;
+    if (actuators_ids.empty()) {
+        actuators_ids = getActuatorsIds();
+    }
+
+    for (size_t i(0); i < actuators_ids.size(); i++) {
+        j = 0;
+        do {
+            error = false;
+            j++;
+            try {
+                getController().send(dynamixel::ax12::GetPosition(actuators_ids[i]));
+                getController().recv(Parameters::read_duration, getStatus());
+                current_pos_step_per_turn.push_back(getStatus().decode16());
+
+                if (actuators_ids[i] < 8 && actuators_ids[i] != 2) {
+                    current_pos.push_back(MX_stepperturn_to_rad(current_pos_step_per_turn[i]));
+                }
+                else if (actuators_ids[i] >= 8) {
+                    current_pos.push_back(AX_stepperturn_to_rad(current_pos_step_per_turn[i]));
+                }
+            }
+            catch (dynamixel::Error e) {
+                std::cerr << "[real_arm] get joint values : error :" << e.msg() << std::endl;
+                error = true;
+            }
+            usleep(1e3);
+        } while (error && j <= 10);
+        if (j == 10) {
+            exit(1);
+        }
+    }
+
+
+    return current_pos;
+}
+
+//For the acutatros defined in actuators_ids vector, returns their speed in RPS (Revolution Per Second)
+std::vector<double> RobotArm::get_joint_speeds(std::vector <byte_t> actuators_ids)
+{
+    bool error = false;
+    unsigned int j;
+    std::vector<double> current_speed;
+    std::vector<int> current_speed_rpm;
+    if (actuators_ids.empty()) {
+        actuators_ids = getActuatorsIds();
+    }
+
+    for (size_t i(0); i < actuators_ids.size(); i++) {
+        j = 0;
+        do {
+            error = false;
+            j++;
+            try {
+                /*dynamixel method that reads the speed, it returns the speed in RPM (Revolution Per Minute), furthermore, the value is interpreted in a certain way: all values from
+                 * 0 to 1023 represents positive velocities (counter-clockwise rotation), while the values from 1024 to 2047 represents the negative velocities (clockwise) with 1024
+                 * being the zero in this sense.
+                */
+                getController().send(dynamixel::ax12::GetSpeed(actuators_ids[i]));
+                getController().recv(Parameters::read_duration, getStatus());
+                current_speed_rpm.push_back(getStatus().decode16());
+
+                //convert the RPM to RPS with the proper sign ("+" for counter-clockwise and "-" for clockwise rotation)
+                if (actuators_ids[i] < 8 && actuators_ids[i] != 2) {
+                    if (current_speed_rpm[i] < 1024) {
+                        current_speed.push_back(rpm_to_rps(current_speed_rpm[i]));
+                    }
+                    else { current_speed.push_back(-1 * rpm_to_rps(current_speed_rpm[i] - 1024)); }
+                }
+            }
+            catch (dynamixel::Error e) {
+                std::cerr << "[real_arm] get joint speed : error :" << e.msg() << std::endl;
+                error = true;
+            }
+            usleep(1e3);
+        } while (error && j <= 10);
+        if (j == 10) {
+            exit(1);
+        }
+    }
 
     return current_speed;
 }
 
-bool RobotArm::set_joint_values(std::vector<float> values, std::vector<byte_t> actuators_ids) {
-	if(actuators_ids.empty())
-		actuators_ids = getActuatorsIds();
-	try {
-		std::vector<int> pos(actuators_ids.size());
+bool RobotArm::set_joint_values(std::vector<double> values, std::vector <byte_t> actuators_ids)
+{
+    if (actuators_ids.empty()) {
+        actuators_ids = getActuatorsIds();
+    }
+    try {
+        std::vector<int> pos(actuators_ids.size());
 
-		int i(0);
-		for(std::vector<float>::iterator it = values.begin(); it != values.end(); it++) {
-			if(actuators_ids[i] < 8) {
-				pos[i] = rad_to_stepperturn_MX(*it);
-				if(actuators_ids[i] == 2) {
-					pos[i+1] = pos[i];
-					it = values.insert(it,pos[i]);
-					i++;
-					it++;
-				}
-			} else {
-				pos[i]=rad_to_stepperturn_AX(*it);
-			}
+        int i(0);
+        for (std::vector<double>::iterator it = values.begin(); it != values.end(); it++) {
+            if (actuators_ids[i] < 8) {
+                pos[i] = rad_to_stepperturn_MX(*it);
+                if (actuators_ids[i] == 2) {
+                    pos[i + 1] = pos[i];
+                    it = values.insert(it, pos[i]);
+                    i++;
+                    it++;
+                }
+            }
+            else {
+                pos[i] = rad_to_stepperturn_AX(*it);
+            }
 
-			i++;
-		}
+            i++;
+        }
 
         getController().send(dynamixel::ax12::SetPositions(actuators_ids, pos));
         getController().recv(Parameters::read_duration, getStatus());
 
 
-		
-		usleep(1e4);
+        usleep(1e4);
 
-		return true;
+        return true;
 
-	} catch(dynamixel::Error e) {
-		std::cerr << "[real_arm] set_joint_values : dynamixel error : " << e.msg() << std::endl;
-		return false;
-	}
+    }
+    catch (dynamixel::Error e) {
+        std::cerr << "[real_arm] set_joint_values : dynamixel error : " << e.msg() << std::endl;
+        return false;
+    }
 }
 
 //Sets the speed of the joints defined in actuators_ids to the corresponding velocities given in values
-bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector<byte_t> actuators_ids) {
+bool RobotArm::set_joint_speeds(std::vector<double> values, std::vector <byte_t> actuators_ids)
+{
 
-    if(actuators_ids.empty())
+    if (actuators_ids.empty()) {
         actuators_ids = getActuatorsIds();
+    }
     try {
-        float speed_value;
+        double speed_value;
         std::vector<int> vel(actuators_ids.size());
         std::vector<bool> dir(actuators_ids.size());
 
         int i(0);
-        for(std::vector<float>::iterator it = values.begin(); it != values.end(); it++) {
-                //convert the speed from rps to rpm
-                speed_value = rps_to_rpm(*it);
-                /*set safety limits for speed (it is set arbitrary to 100 RPM but the user can change it as needed). An important note is that the duration of the trajectory
-                 * significant role in determining the maximum joint velocity the algorithm will give. So if the returned velocities are higher than the set safety limits then
-                 * just try to prolong the duration the duration
-                */
-                if (speed_value > 200){
-                    vel[i] = 200;
+        for (std::vector<double>::iterator it = values.begin(); it != values.end(); it++) {
+            //convert the speed from rps to rpm
+            speed_value = rps_to_rpm(*it);
+            /*set safety limits for speed (it is set arbitrary to 100 RPM but the user can change it as needed). An important note is that the duration of the trajectory
+             * significant role in determining the maximum joint velocity the algorithm will give. So if the returned velocities are higher than the set safety limits then
+             * just try to prolong the duration the duration
+            */
+            if (speed_value > 200) {
+                vel[i] = 200;
 
-                }
-                else
-                    vel[i] = rps_to_rpm(*it);
+            }
+            else {
+                vel[i] = rps_to_rpm(*it);
+            }
 
-                //set the direction: if minus then it is clockwise and direction should be true, otherwise it is false and it is counter_clockwise
-                if(*it < 0){
-                    dir[i] = true;
-                } else {
-                    dir[i] = false;
-                }
+            //set the direction: if minus then it is clockwise and direction should be true, otherwise it is false and it is counter_clockwise
+            if (*it < 0) {
+                dir[i] = true;
+            }
+            else {
+                dir[i] = false;
+            }
 
-                //the second and third joints have the same speed/position, they are basically the same because they are interconnected physically
-                if(actuators_ids[i] == 2) {
-                    vel[i+1] = vel[i];
-                    dir[i+1] = dir[i];
-                    it = values.insert(it,vel[i]);
-                    i++;
-                    it++;
-                }
+            //the second and third joints have the same speed/position, they are basically the same because they are interconnected physically
+            if (actuators_ids[i] == 2) {
+                vel[i + 1] = vel[i];
+                dir[i + 1] = dir[i];
+                it = values.insert(it, vel[i]);
+                i++;
+                it++;
+            }
 
             i++;
         }
 
         //dynamixel method that sets the speeds of motors defined in "actuators_ids", with velocities given in "vel", and the directions described in "dir"
-        getController().send(dynamixel::ax12::SetSpeeds(actuators_ids, vel,dir));
+        getController().send(dynamixel::ax12::SetSpeeds(actuators_ids, vel, dir));
         getController().recv(Parameters::read_duration, getStatus());
 
         usleep(1e4);
 
         return true;
 
-    } catch(dynamixel::Error e) {
+    }
+    catch (dynamixel::Error e) {
         std::cerr << "[real_arm] set_joint_values : dynamixel error : " << e.msg() << std::endl;
         return false;
     }
 }
 
+bool RobotArm::set_speeds_to_zero(std::vector <byte_t> actuators_ids)
+{
+    std::vector<double> joints_speeds(actuators_ids.size(), 0.0);
+    return set_joint_speeds(joints_speeds, actuators_ids);
+}
+
 //set the operation mode for given actuators to wheel mode which allows their control in velocity
-bool RobotArm::mode_speed(std::vector<byte_t> reduced_actuator_id){
-    try{
-        for(int i = 0;i<reduced_actuator_id.size();i++){
+bool RobotArm::mode_speed(std::vector <byte_t> reduced_actuator_id)
+{
+    try {
+        for (int i = 0; i < reduced_actuator_id.size(); i++) {
             getController().send(dynamixel::ax12::SetContinuous(reduced_actuator_id[i]));
             getController().recv(Parameters::read_duration, getStatus());
             usleep(1e4);
         }
         return true;
-    }catch(dynamixel::Error e) {
+    }
+    catch (dynamixel::Error e) {
         std::cerr << "[real_arm] set mode to speed : dynamixel error : " << e.msg() << std::endl;
         return false;
     }
 }
 
 //set the operation mode for given actuators to joint mode which allows their control in position
-bool RobotArm::mode_position(std::vector<byte_t> actuators_ids){
-    try{
-        for(int i = 0;i<actuators_ids.size();i++){
+bool RobotArm::mode_position(std::vector <byte_t> actuators_ids)
+{
+    try {
+        for (int i = 0; i < actuators_ids.size(); i++) {
             /*dynamixel method that take care of changing the joint mode to position (joint) mode for joints defined in "actuators_ids". In the dynamixel library that belongs to
              * a git commit equal to or before the "commit 0c7be73bbc57148b3369345dc59a126ad3aefc64", this method is defined in file "ax12.hpp" which usually should resides in
              * "/usr/local/include/dynamixel", given that the library has been installed, obviously. Now the important point is that if the motors that you want to set in joint
@@ -290,49 +342,91 @@ bool RobotArm::mode_position(std::vector<byte_t> actuators_ids){
             usleep(1e4);
         }
         return true;
-    }catch(dynamixel::Error e) {
+    }
+    catch (dynamixel::Error e) {
         std::cerr << "[real_arm] set mode to position : dynamixel error : " << e.msg() << std::endl;
         return false;
     }
 }
-void RobotArm::changePValue(int val, int servo_index) {
-	if(servo_index == -1) {
-		for(int i(2) ; i < 7 ; i++) {
-			getController().send(dynamixel::ax12::WriteData(i, dynamixel::ax12::ctrl::cw_compliance_slope, val));
-			getController().recv(Parameters::read_duration, getStatus());
-		}
-	} else if(servo_index >= 2 && servo_index <= 6) {
-		getController().send(dynamixel::ax12::WriteData(servo_index, dynamixel::ax12::ctrl::cw_compliance_slope, val));
-		getController().recv(Parameters::read_duration, getStatus());
-	}
+
+void RobotArm::changePValue(int val, int servo_index)
+{
+    if (servo_index == -1) {
+        for (int i(2); i < 7; i++) {
+            getController().send(dynamixel::ax12::WriteData(i, dynamixel::ax12::ctrl::cw_compliance_slope, val));
+            getController().recv(Parameters::read_duration, getStatus());
+        }
+    }
+    else if (servo_index >= 2 && servo_index <= 6) {
+        getController().send(dynamixel::ax12::WriteData(servo_index, dynamixel::ax12::ctrl::cw_compliance_slope, val));
+        getController().recv(Parameters::read_duration, getStatus());
+    }
 }
 
-void RobotArm::changeIValue(int val, int servo_index) {
-	if(servo_index == -1) {
-		for(int i(2) ; i < 7 ; i++) {
-			getController().send(dynamixel::ax12::WriteData(i, dynamixel::ax12::ctrl::ccw_compliance_margin, val));
-			getController().recv(Parameters::read_duration, getStatus());
-		}
-	} else if(servo_index >= 2 && servo_index <= 6) {
-		getController().send(dynamixel::ax12::WriteData(servo_index, dynamixel::ax12::ctrl::ccw_compliance_margin, val));
-		getController().recv(Parameters::read_duration, getStatus());
-	}
+void RobotArm::changeIValue(int val, int servo_index)
+{
+    if (servo_index == -1) {
+        for (int i(2); i < 7; i++) {
+            getController().send(dynamixel::ax12::WriteData(i, dynamixel::ax12::ctrl::ccw_compliance_margin, val));
+            getController().recv(Parameters::read_duration, getStatus());
+        }
+    }
+    else if (servo_index >= 2 && servo_index <= 6) {
+        getController().send(
+                dynamixel::ax12::WriteData(servo_index, dynamixel::ax12::ctrl::ccw_compliance_margin, val));
+        getController().recv(Parameters::read_duration, getStatus());
+    }
 }
 
-void RobotArm::changeDValue(int val, int servo_index) {
-	if(servo_index == -1) {
-		for(int i(2) ; i < 7 ; i++) {
-			getController().send(dynamixel::ax12::WriteData(i, dynamixel::ax12::ctrl::cw_compliance_margin, val));
-			getController().recv(Parameters::read_duration, getStatus());
-		}
-	} else if(servo_index >= 2 && servo_index <= 6) {
-		getController().send(dynamixel::ax12::WriteData(servo_index, dynamixel::ax12::ctrl::cw_compliance_margin, val));
-		getController().recv(Parameters::read_duration, getStatus());
-	}
+void RobotArm::changeDValue(int val, int servo_index)
+{
+    if (servo_index == -1) {
+        for (int i(2); i < 7; i++) {
+            getController().send(dynamixel::ax12::WriteData(i, dynamixel::ax12::ctrl::cw_compliance_margin, val));
+            getController().recv(Parameters::read_duration, getStatus());
+        }
+    }
+    else if (servo_index >= 2 && servo_index <= 6) {
+        getController().send(dynamixel::ax12::WriteData(servo_index, dynamixel::ax12::ctrl::cw_compliance_margin, val));
+        getController().recv(Parameters::read_duration, getStatus());
+    }
 }
 
-void RobotArm::close_usb_controllers() {
-	getController().close_serial();  
+void RobotArm::open_gripper()
+{
+    std::vector<double> pos(2);
+
+    std::cout << "Open the gripper" << std::endl;
+
+    std::vector <byte_t> actuators_ids(2);
+    actuators_ids[0] = 8;
+    actuators_ids[1] = 9;
+
+    pos[0] = 0;
+    pos[1] = 0;
+
+    set_joint_values(pos, actuators_ids);
+}
+
+void RobotArm::close_gripper()
+{
+    std::vector<double> pos(2);
+
+    std::cout << "Close the gripper" << std::endl;
+
+    std::vector <byte_t> actuators_ids(2);
+    actuators_ids[0] = 8;
+    actuators_ids[1] = 9;
+
+    pos[0] = 0.32;
+    pos[1] = -0.32;
+
+    set_joint_values(pos, actuators_ids);
+}
+
+void RobotArm::close_usb_controllers()
+{
+    getController().close_serial();
 }
 
 
