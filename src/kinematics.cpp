@@ -26,14 +26,15 @@ std::vector<unsigned char> reduced_actuator_id (tmp1, tmp1 + 7);
 Eigen::MatrixXd Kinematics::kk_mat(const std::vector<float>& a) const
 {
     //robot description (dimensions of each link and joint)
-    float body = Params::body_height/*0.05*/,
-            p1 = Params::p1_height/*0.056*/,
-            p2 = Params::p2_height/*0.23*/,
-            p3 = Params::p3_height /*0.155*/,
-            p4 = Params::p4_height /*0.08*/,
-            p5 = Params::p5_height/*0.07*/,
-            p6 = Params::p6_height /*0.021*/,
-            gripper_height = Params::gripper_height /*0.171*/;
+    //float body = Params::body_height/*0.05*/,
+      //      p1 = Params::p1_height/*0.056*/,
+        //    p2 = Params::p2_height/*0.23*/,
+          //  p3 = Params::p3_height /*0.155*/,
+            //p4 = Params::p4_height /*0.08*/,
+            //p5 = Params::p5_height/*0.07*/,
+            //p6 = Params::p6_height /*0.021*/,
+            //gripper_height = Params::gripper_height /*0.171*/;
+     float body = 0.05, p1 = 0.056, p2 = 0.23, p3 = 0.155, p4 = 0.08, p5 = 0.07, p6 = 0.021, gripper_height = 0.171;
     /* This is the geometric representation of the robot according to Khalil-Kleinfinger notation, the additional colomn is to represent the type of the joint it is 0 for
      * revolute, 1 for translational and 2 for fixed joint, it will be useful later for the dynamic model if needed, for more details refer to : "Modeling and Control of
      * Manipulators Part I: Geometric and Kinematic Models" by Wisama KHALIL [1]
@@ -168,10 +169,10 @@ void Kinematics::control_inverse_initialize(std::vector<float> target_pos, std::
     //then deduce the distance vector using only the position part of the initial_pos vector, and the target position
     distance << target_pos[0] - initial_pos[0], target_pos[1] - initial_pos[1], target_pos[2] - initial_pos[2];
 
-    std::cout << "distance norm" << distance.norm() << std::endl;
+    //std::cout << "distance norm" << distance.norm() << std::endl;
     duration = 7.5*distance.norm()/max_speed;
-    std::cout << "duration" << duration << std::endl;
-//    std::cout << "Distance to be covered: " << distance << std::endl;
+    //std::cout << "duration" << duration << std::endl;
+    std::cout << "Distance to be covered: \n" << distance << std::endl;
 }
 
 
@@ -190,12 +191,12 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
     Eigen::VectorXd Z(6);
     Eigen::VectorXd joint_val(6);
     joint_val << actual_joint_values[0]
-              , actual_joint_values[1]
-              , actual_joint_values[2]
+              , actual_joint_values[1] + initial_joint_values[1]
+              , actual_joint_values[2] + initial_joint_values[2]
               , actual_joint_values[3]
               , actual_joint_values[4]
               , actual_joint_values[5];
-    double a = -.01;
+    double a = -.05;
     double delta_j_limit = M_PI;
     Z = 2*a*joint_val/(delta_j_limit*delta_j_limit);
 
@@ -212,8 +213,8 @@ std::vector<float> Kinematics::control_inverse(std::vector<float> actual_joint_v
     pseudo_inverse(jt_p,invJt_p);
 
     Eigen::VectorXd delta_joint(invJt_p*desired_kinematic_twist + (Id - invJt_p*jt_p)*Z);
-
-//    Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
+    //Eigen::JacobiSVD<Eigen::MatrixXd> svd(jt_p, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    //Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
 
     //fill the joints velocity with corresponding values from delta_joint variable, then return the vector
     for (int i = 0;i < delta_joint.size();i++)
@@ -384,7 +385,7 @@ void Kinematics::goto_desired_joints_angles_position_mode(std::vector<float> des
 //starting from the current position of the end effector this method will make the end effector goes for small distance in a forward sense
 void Kinematics::primitive_motion(){
     std::vector<float> current_angles,current_position,target_position(3);
-    float prim_distance = 0.05; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
+    float prim_distance = 0.02; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
     Real robot;
 
     //get the current position, by getting current joint angles and then passing them to the forward model

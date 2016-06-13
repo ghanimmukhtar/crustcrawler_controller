@@ -52,52 +52,41 @@ int main(int argc, char** argv){
         }
 
     sleep(2);
-
-    for(int i = 0; i < simu.getArm()->servos().size(); i++)
-        simu.getArm()->servos()[i]->set_mode(ode::Servo::M_VEL);
-
-
     std::vector<float> last_angles(8),joints_velocity(7);
-
-
     Kinematics kine;
-
-//    duration = d;
-    //set motors speed to zero so that they start from static situation
-    for (int k = 0; k < reduced_actuator_id.size(); k++)
-        simu.getArm()->servos()[k]->set_vel(0,0.0);
-
-
-
+    //waypoint last_angles;
     //get the feedback about current joints angles, using the method defined in RobotArm.cpp, which actually returns the angle as a fraction of (pi), so we multiply it by (pi)
     //to get it in radian. After that we need to define it relevant to values given in initial_joint_values, as mentioned earlier.
-
     for(int i = 0; i < simu.getArm()->servos().size(); i++)
         last_angles[i] = simu.getArm()->servos()[i]->get_angle(0);
     for (int i = 0; i < last_angles.size(); i++)
         last_angles[i] = last_angles[i] - initial_joint_values[i];
+    std::vector<float> start_position = kine.forward_model(last_angles);
+    Eigen::Vector3d real_start_pose = simu.getArm()->pos();
+    std::cout << "real starting position is as follows : " << std::endl
+              << "x = " << real_start_pose(0) << std::endl
+              << "y = " << real_start_pose(1) << std::endl
+              << "z = " << real_start_pose(2) << std::endl;
 
+    std::cout << "starting position is as follows : " << std::endl
+              << "x = " << start_position[0] << std::endl
+              << "y = " << start_position[1] << std::endl
+              << "z = " << start_position[2] << std::endl;
     kine.control_inverse_initialize(goal_pose,last_angles);
-
     float duration = kine.get_duration();
-
-    std::cout << duration << std::endl;
+    for(int i = 0; i < simu.getArm()->servos().size(); i++)
+        simu.getArm()->servos()[i]->set_mode(ode::Servo::M_VEL);
+    //set motors speed to zero so that they start from static situation
+    for (int k = 0; k < reduced_actuator_id.size(); k++)
+        simu.getArm()->servos()[k]->set_vel(0,0.0);
 
     float timer = 0.0;
-
     while(timer < duration){
-
         for(int i = 0; i < simu.getArm()->servos().size(); i++)
             last_angles[i] = simu.getArm()->servos()[i]->get_angle(0);
-
         for (size_t i = 0; i < last_angles.size(); i++)
             last_angles[i] = last_angles[i] - initial_joint_values[i];
         joints_velocity = kine.control_inverse(last_angles,duration,timer);
-
-//        for(auto v : joints_velocity)
-//            std::cout << v << " ";
-//        std::cout << std::endl;
-
         for(int i = 0; i < joints_velocity.size(); i++)
             simu.getArm()->servos()[i]->set_vel(0,joints_velocity[i]);
 
@@ -112,6 +101,24 @@ int main(int argc, char** argv){
         //increment the timer by the simulation step time which actually defined as 0.015 milisec, in simu.cpp via the method setStep(float time)
         timer = timer + simu.getStep();
     }
+
+    for(int i = 0; i < simu.getArm()->servos().size(); i++)
+        last_angles[i] = simu.getArm()->servos()[i]->get_angle(0);
+    for (int i = 0; i < last_angles.size(); i++)
+        last_angles[i] = last_angles[i] - initial_joint_values[i];
+
+    std::vector<float> end_position = kine.forward_model(last_angles);
+
+    Eigen::Vector3d real_end_pose = simu.getArm()->pos();
+    std::cout << "real ending position is as follows : " << std::endl
+              << "x = " << real_end_pose(0) << std::endl
+              << "y = " << real_end_pose(1) << std::endl
+              << "z = " << real_end_pose(2) << std::endl;
+
+    std::cout << "ending position is as follows : " << std::endl
+              << "x = " << end_position[0] << std::endl
+              << "y = " << end_position[1] << std::endl
+              << "z = " << end_position[2] << std::endl;
 
     dCloseODE();
 
