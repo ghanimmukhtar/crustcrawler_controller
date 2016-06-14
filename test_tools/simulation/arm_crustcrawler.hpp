@@ -11,7 +11,7 @@ namespace robot {
 	
 	public:
 	
-		Arm(ode::Environment_arm & env, float height);
+		Arm(ode::Environment_arm & env, double height);
 		~Arm();
 		
 		
@@ -33,7 +33,7 @@ namespace robot {
 		 * @param a parameter indicating the orientation of the servo-motor : 0 is a rotation on x,y plan and 1 a rotation on y,z plan 
 		 * @param the environment where the arm is located
 		 */
-		void add_seg(int i, float mass, float length, float width, float height, float current_height, ode::Environment_arm& env, int dim, int servo_type = 0);
+		void add_seg(int i, double mass, double length, double width, double height, double current_height, ode::Environment_arm& env, int dim, int servo_type = 0);
 		
 		/**
 		 * @brief Add a finger to the arm
@@ -47,17 +47,17 @@ namespace robot {
 		 * @param the distance between the two fingers
 		 * @param a boolean : true if did the right finger, false for the left finger
 		 */
-		void add_finger(int i, float mass[5], float length[5], float width[5], float height[5], float current_height, ode::Environment_arm& env, float inter_dist, bool right);
+		void add_finger(int i, double mass[5], double length[5], double width[5], double height[5], double current_height, ode::Environment_arm& env, double inter_dist, bool right);
 		
 		
 		// Getters / Setters
-		void setHeight(float height) { _height = height; }
-		float getHeight() { return _height; }
+		void setHeight(double height) { _height = height; }
+		double getHeight() { return _height; }
 		
 	 
 	private:
 	
-		float _height;
+		double _height;
 	};
 }
 #endif

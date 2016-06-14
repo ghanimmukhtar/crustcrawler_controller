@@ -16,10 +16,10 @@ public:
 	
     Simu(){}
     Simu(Data d);
-    Simu(Data d, float cube_x, float cube_y, float rotationCoeff);
+    Simu(Data d, double cube_x, double cube_y, double rotationCoeff);
 	~Simu();
 	
-    void init(Data d, float cube_x = Params_Simu::cube::dist_arm_x, float cube_y = Params_Simu::cube::dist_arm_y, float rotationCoeff = Params_Simu::cube::rotationCoeff);
+    void init(Data d, double cube_x = Params_Simu::cube::dist_arm_x, double cube_y = Params_Simu::cube::dist_arm_y, double rotationCoeff = Params_Simu::cube::rotationCoeff);
 
 	/**
 	 * @brief launch the simulation with the controller ac
@@ -61,31 +61,31 @@ public:
 	
 	
 	// Getters / Setters
-	float getStep() { return _step; }
-	void setStep(float step) { _step = step; }
-	float getSpeed() { return _speed; }
-	void setSpeed(float speed) { _speed = speed; }
+	double getStep() { return _step; }
+	void setStep(double step) { _step = step; }
+	double getSpeed() { return _speed; }
+	void setSpeed(double speed) { _speed = speed; }
 	int getTimeOfStab() { return _timeOfStab; }
 	void setTimeOfStab(int timeOfStab) { _timeOfStab = timeOfStab; }
 	
 	bool getCrash() { return _crash; }
 	void setCrash(bool crash) { _crash = crash; }
-	float getTotalTorque() { return _total_torque; }
-	void setTotalTorque(float total_torque) { _total_torque = total_torque; }
+	double getTotalTorque() { return _total_torque; }
+	void setTotalTorque(double total_torque) { _total_torque = total_torque; }
 	Eigen::Vector3d& getMin() { return _min; }
 	void setMin(Eigen::Vector3d min) { _min = min; }
 	Eigen::Vector3d& getMax() { return _max; }
 	void setMax(Eigen::Vector3d max) { _max = max; }
 	Eigen::Vector3d getDiffCoords() { return _diffCoords; }
 	void setDiffCoords(Eigen::Vector3d diffCoords) { _diffCoords = diffCoords; }
-    void setPerformance(float performance) { _performance = performance; }
-	float getPerformance() { return _performance; }
-	void setEffectorAngle(float effectorAngle) { _effectorAngle = effectorAngle; }
-	float getEffectorAngle() { return _effectorAngle; }
-	void setWristAngle(float wristAngle) { _wristAngle = wristAngle; }
-	float getWristAngle() { return _wristAngle; }
+    void setPerformance(double performance) { _performance = performance; }
+	double getPerformance() { return _performance; }
+	void setEffectorAngle(double effectorAngle) { _effectorAngle = effectorAngle; }
+	double getEffectorAngle() { return _effectorAngle; }
+	void setWristAngle(double wristAngle) { _wristAngle = wristAngle; }
+	double getWristAngle() { return _wristAngle; }
 	
-    const std::map<float, std::vector<float> >& get_arm_trajectory(){return _arm_trajectory;}
+    const std::map<double, std::vector<double> >& get_arm_trajectory(){return _arm_trajectory;}
 
 	boost::shared_ptr<ode::Environment_arm> getEnv() { return _env; }
 	void setEnv(boost::shared_ptr<ode::Environment_arm> env) { _env = env; }
@@ -95,18 +95,18 @@ public:
 	
 private:
 	
-	float _step;
-	float _speed;
+	double _step;
+	double _speed;
 	int _timeOfStab;
 	
 	bool _crash;
-	float _total_torque;
+	double _total_torque;
 	Eigen::Vector3d _min, _max;
 	Eigen::Vector3d _diffCoords;
-	float _performance;
-	float _effectorAngle;
-	float _wristAngle;
-    std::map<float,std::vector<float> > _arm_trajectory;
+	double _performance;
+	double _effectorAngle;
+	double _wristAngle;
+    std::map<double,std::vector<double> > _arm_trajectory;
 
     bool cube_touched;
 

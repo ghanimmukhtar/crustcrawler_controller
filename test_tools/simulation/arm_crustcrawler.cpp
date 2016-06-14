@@ -12,7 +12,7 @@ using namespace ode;
 
 namespace robot {
 	
-	Arm::Arm(ode::Environment_arm & env, float height) {
+	Arm::Arm(ode::Environment_arm & env, double height) {
 		setHeight(height);
 		
 		/// creation of robot's body
@@ -43,7 +43,7 @@ namespace robot {
 		add_seg(6,	Params::p6_mass, Params::p6_length,	Params::p6_width, Params::p6_height, height, env, 0, 2);
 		height += Params::p6_height;
 		
-		float fmass[5], flength[5], fwidth[5], fheight[5];
+		double fmass[5], flength[5], fwidth[5], fheight[5];
 		fwidth[0] = Params::finger_width1;
 		fwidth[1] = Params::finger_width2;
 		fwidth[2] = Params::finger_width3;
@@ -78,7 +78,7 @@ namespace robot {
 		return (_bodies[_bodies.size()-1]->get_pos()+_bodies[_bodies.size()-6]->get_pos())/2;
 	}
 	
-	void Arm::add_seg(int i, float mass, float length, float width, float height, float current_height, Environment_arm& env, int dim, int servo_type) {
+	void Arm::add_seg(int i, double mass, double length, double width, double height, double current_height, Environment_arm& env, int dim, int servo_type) {
 		Object::ptr_t p(new Box(env, Eigen::Vector3d(0, 0, current_height + height/2), mass, length, width, height));
 		
 		_bodies.push_back(p);
@@ -143,19 +143,19 @@ namespace robot {
 		_servos.push_back(s1);
 	}
 	 
-	void Arm::add_finger(int i, float mass[5], float length[5], float width[5], float height[5], float current_height, Environment_arm& env, float inter_dist, bool right) {
+	void Arm::add_finger(int i, double mass[5], double length[5], double width[5], double height[5], double current_height, Environment_arm& env, double inter_dist, bool right) {
 		int sign(1);
 		if(!right) { sign *= -1; }
 		
-		float tmp_height(current_height);
-		float dist1(((Params::finger_inter_dist/2.0f)+(width[1]/2.0f))*sign);
-		float dist2(((Params::finger_inter_dist/2.0f)+width[1]-(width[2]/2.0f))*sign);
-		float dist_serv((width[0]/2.0f)*sign);
+		double tmp_height(current_height);
+		double dist1(((Params::finger_inter_dist/2.0f)+(width[1]/2.0f))*sign);
+		double dist2(((Params::finger_inter_dist/2.0f)+width[1]-(width[2]/2.0f))*sign);
+		double dist_serv((width[0]/2.0f)*sign);
 		
-		float angle1(0.12); 
-		float angle2(0.06);
+		double angle1(0.12);
+		double angle2(0.06);
 		
-		float curr_dist_y(0);
+		double curr_dist_y(0);
 		std::vector<Object::ptr_t> p;
 		
 		for(int j(0) ; j < 5 ; j++) {

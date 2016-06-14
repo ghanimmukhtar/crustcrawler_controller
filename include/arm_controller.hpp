@@ -6,8 +6,8 @@
 
 
 struct _waypoint {
-	std::vector<float> step;
-	float fingersValue; 
+	std::vector<double> step;
+	double fingersValue; 
 };
 typedef _waypoint waypoint;
 
@@ -20,20 +20,20 @@ public:
 	~Arm_controller();
 	
 	/**
-	 * @brief prints the controller as used by the simulation (simulation format (8 float + 1 fingers value))
+	 * @brief prints the controller as used by the simulation (simulation format (8 double + 1 fingers value))
 	 */
 	void showControllers();
 	
 	/**
-	 * @brief prints the controller as given by the user or by Map-Elite (user format (7 float))
+	 * @brief prints the controller as given by the user or by Map-Elite (user format (7 double))
 	 */
 	void showRealController();
 	
 	/**
 	 * @brief add a waypoint to the controller
-	 * @param the waypoint to add (user format (7 float))
+	 * @param the waypoint to add (user format (7 double))
 	 */
-	void addWaypoint(std::vector<float> step);
+	void addWaypoint(std::vector<double> step);
 	
 	/**
 	 * @brief get the time needed to reach the waypoint b from the waypoint a
@@ -42,13 +42,13 @@ public:
 	 * @param the speed of the robot
 	 * @return time needed
 	 */
-	float getMoveTime(waypoint a, waypoint b, float speed);
+	double getMoveTime(waypoint a, waypoint b, double speed);
 	
 	/**
 	 * @brief find the mean of the variances of all waypoints of the arm
 	 * @return the variance
 	 */
-	float findVariance();
+	double findVariance();
 	
 	/**
 	 * @brief adapt the controller to the real arm
@@ -59,8 +59,8 @@ public:
 	// Getters / Setters
 	void setNbWaypoints(int nbWaypoints) { _nbWaypoints = nbWaypoints; }
 	int getNbWaypoints() { return _nbWaypoints; }
-	void setOrigin(std::vector<float> origin) { _origin.step = origin; _origin.fingersValue = 0; }
-	void setOrigin(float value) { _origin.step = _getVector(value); _origin.fingersValue = 0; }
+	void setOrigin(std::vector<double> origin) { _origin.step = origin; _origin.fingersValue = 0; }
+	void setOrigin(double value) { _origin.step = _getVector(value); _origin.fingersValue = 0; }
 	waypoint getOrigin() { return _origin; }
 	void setTrajectory(std::vector< waypoint > trajectory) { _trajectory = trajectory;}
 	std::vector< waypoint >& getTrajectory() { return _trajectory; }
@@ -71,10 +71,10 @@ public:
 	
 private:
 	
-	int _sign(float a);
-	std::vector<float> _getVector(float val);
-	float _variance(std::vector<float> v);
-	float _mean(std::vector<float> v);
+	int _sign(double a);
+	std::vector<double> _getVector(double val);
+	double _variance(std::vector<double> v);
+	double _mean(std::vector<double> v);
 	
 	int _nbWaypoints;
 	waypoint _origin;

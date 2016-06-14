@@ -7,9 +7,9 @@
 int main(int argc, char **argv)
 {
     Kinematics km;
-    std::vector<float> start_pose = {0.05,-0.15,0.2};
-    std::vector<float> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
-    std::vector<float> home_position = {0.05,-0.15,0.2};
+    std::vector<double> start_pose = {0.05,-0.15,0.2};
+    std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
+    std::vector<double> home_position = {0.05,-0.15,0.2};
 
     //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
     km.goto_desired_position(start_pose);
