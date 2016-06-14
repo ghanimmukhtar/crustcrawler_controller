@@ -90,6 +90,20 @@ void RobotArm::relax() {
 	}
 }
 
+void RobotArm::relax_gripper(){
+    unsigned char grip_m1 = 8; unsigned char grip_m2 = 9;
+    try {
+        std::cout << "************* i am openning the gripper **************************" << std::endl;
+            getController().send(dynamixel::ax12::TorqueEnable(grip_m1, false));
+            getController().recv(Parameters::read_duration, getStatus());
+
+            getController().send(dynamixel::ax12::TorqueEnable(grip_m2, false));
+            getController().recv(Parameters::read_duration, getStatus());
+
+    } catch(dynamixel::Error e) {
+        std::cerr << "[real_arm] dynamixel error : " << e.msg() << std::endl;
+    }
+}
 void RobotArm::enable() {
 	try {
 		std::cout << "[real_arm] enable motor..." << std::endl;
@@ -164,6 +178,37 @@ std::vector<float> RobotArm::get_joint_speeds(std::vector<byte_t> actuators_ids)
     return current_speed;
 }
 
+//get the load of each joint
+std::vector<float> RobotArm::get_joint_loads(std::vector<byte_t> actuators_ids) {
+    std::vector<float> current_load;
+    std::vector<int> current_load_integer;
+    if(actuators_ids.empty())
+        actuators_ids = getActuatorsIds();
+
+    for (size_t i(0) ; i < actuators_ids.size() ; i++) {
+        try {
+            getController().send(dynamixel::ax12::GetLoad(actuators_ids[i]));
+            getController().recv(Parameters::read_duration, getStatus());
+            current_load_integer.push_back(getStatus().decode16());
+
+            if(actuators_ids[i] < 8) {
+                if(current_load_integer[i] < 1024)
+                    current_load.push_back(MX_integer_load_to_float(current_load_integer[i]));
+                else
+                    current_load.push_back(MX_integer_load_to_float(current_load_integer[i] - 1024));
+            }
+        } catch(dynamixel::Error e) {
+            std::cerr << "[real_arm] get joint values : error :" << e.msg() << std::endl;
+            exit(1);
+            return std::vector<float>(1, 100);
+        }
+    }
+        usleep(1e3);
+
+    return current_load;
+}
+
+//set joints position (angle) to values
 bool RobotArm::set_joint_values(std::vector<float> values, std::vector<byte_t> actuators_ids) {
 	if(actuators_ids.empty())
 		actuators_ids = getActuatorsIds();
@@ -258,6 +303,12 @@ bool RobotArm::set_joint_speeds(std::vector<float> values, std::vector<byte_t> a
         std::cerr << "[real_arm] set_joint_values : dynamixel error : " << e.msg() << std::endl;
         return false;
     }
+}
+
+bool RobotArm::set_speeds_to_zero(std::vector <byte_t> actuators_ids)
+{
+    std::vector<float> joints_speeds(actuators_ids.size(), 0.0);
+    return set_joint_speeds(joints_speeds, actuators_ids);
 }
 
 //set the operation mode for given actuators to wheel mode which allows their control in velocity

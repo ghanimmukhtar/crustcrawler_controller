@@ -30,6 +30,7 @@ private :
     float rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
     float duration; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
     const double max_speed = 1.;
+    const double max_load = 0.3;
 
 public :
 
@@ -37,6 +38,7 @@ public :
         duration = 6;
     }
 
+    float public_duration;
     /**
      * @brief initializing necessary variables to guide the arm to a desired Cartesian position.
      * @param desired position, x, y and z coordinates
@@ -94,11 +96,25 @@ public :
     void goto_desired_position(std::vector<float> desired_position);
 
     /**
+     * @brief positioning the gripper to a predefined pose.
+     * @param no parameters needed
+     * @return nothing but guide the gripper to desired pose
+     */
+    void position_gripper();
+
+    /**
      * @brief performs a primitive motion.
      * @param no parameters needed,
      * @return nothing but guide the arm into the desired direction
      */
     void primitive_motion();
+
+    /**
+     * @brief performs a retraction motion to releave the arm when it is stressed.
+     * @param no parameters needed,
+     * @return nothing but guide the arm so that it is releaved
+     */
+    void releave();
 
     //getter for the duration
     float get_duration(){return duration;}

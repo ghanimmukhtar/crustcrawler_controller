@@ -19,6 +19,7 @@ struct Parameters {
     static constexpr double MX_step_per_turn = 4096.0;
     static constexpr double AX_step_per_turn = 1024.0;
     static constexpr float read_duration = 0.02f;
+    static constexpr double MX_max_torque = 1023.0;
 };
 
 class RobotArm {
@@ -46,6 +47,11 @@ public:
 	 */
 	void relax();
 
+    /**
+     * @brief disable grippers' dynamixel motors
+     */
+    void relax_gripper();
+
 	/**
 	 * @brief enable all dynamixel motors;
 	 */
@@ -63,6 +69,12 @@ public:
      */
     std::vector<float> get_joint_speeds(std::vector<byte_t> actuators_ids);
 
+    /**
+     * @brief get current joint loads of all dynamixel motors
+     * @return joint loads as integers
+     */
+    std::vector<float> get_joint_loads(std::vector<byte_t> actuators_ids);
+
 
 	/**
 	 * @brief send joint values to dynamixel motors
@@ -75,6 +87,12 @@ public:
      * @param controller vector of joint speeds in fraction of PI.Sec
      */
     bool set_joint_speeds(std::vector<float> controller, std::vector<byte_t> actuators_ids = std::vector<byte_t>());
+
+    /**
+     * @brief set joint speeds to zero
+     * @param controller vector of joint speeds as zero PI.sec
+     */
+    bool set_speeds_to_zero( std::vector<byte_t> actuators_ids = std::vector<byte_t>());
 
     /**
      * @brief change dynamixel motors operating mode to wheel mode, allowing their control in speed
@@ -181,6 +199,13 @@ protected:
 	 * @return
 	 */
 	float AX_stepperturn_to_rad(int a) { return 2*((float)a)/Parameters::AX_step_per_turn-1; }
+
+    /**
+     * @brief conversion from MX raw load reading to a percentage of the maximum torque
+     * @param (a) which is the reading of current load
+     * @return equivalent percentage from the maximum torque either in CW or CCW
+     */
+    float MX_integer_load_to_float(int a){return (float)a/Parameters::MX_max_torque;}
 };
 
 #endif

@@ -15,7 +15,7 @@ struct Params_Simu {
         static constexpr float dist_arm_z = 0;			// Distance between the arm and the center of the table (z axis)
         static constexpr float length = 1.6;			// Length of the table
         static constexpr float width = 0.8;				// Width of the table
-        static constexpr float height = 0.2;			// Height of the table
+        static constexpr float height = 0.0;			// Height of the table
 	};
 	// Cube parameters
 	struct cube {
