@@ -159,7 +159,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < last_angles.size(); i++)
         last_angles[i] = last_angles[i] - initial_joint_values[i];
 
-    std::vector<float> end_position = kine.forward_model(last_angles);
+    std::vector<double> end_position = kine.forward_model(last_angles);
 
     Eigen::Vector3d real_end_pose = simu.getArm()->pos();
     std::cout << "real ending position is as follows : " << std::endl

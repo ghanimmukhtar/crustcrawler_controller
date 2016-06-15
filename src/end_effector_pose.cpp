@@ -10,8 +10,8 @@ int main(int argc, char **argv)
     unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
     std::vector<unsigned char> reduced_actuator_id (tmp1, tmp1 + 7);
 
-    float tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
-    std::vector<float> initial_joint_values (tmp, tmp + 8);
+    double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> initial_joint_values (tmp, tmp + 8);
 
     std::vector<double> pose;
     std::vector<double> joint_values(7);
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
         for(int i = 0; i < joint_values.size(); i++)
             joint_values[i] = joint_values[i] * M_PI - initial_joint_values[i];
 
-        //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
+        //use the method goto_desired_position(std::vector<double> target_position) to guide the end effector to the desired position
         pose = km.forward_model(joint_values);
 
         std::cout << "end effector position : ";
