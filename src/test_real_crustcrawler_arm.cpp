@@ -7,17 +7,34 @@
 int main(int argc, char **argv)
 {
     Kinematics km;
+    Real robot;
+
+    double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> initial_joint_values(tmp, tmp + 8);
+    unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
+    std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
+    std::vector<double> joints_values(7), current_position;
+
+    joints_values = robot.getArm().get_joint_values(reduced_actuator_id);
+    for (int i = 0; i < joints_values.size(); i++) {
+        joints_values[i] = M_PI * joints_values[i] - initial_joint_values[i];
+    }
+    current_position = km.forward_model(joints_values);
+
+    std::cout << "X is: " << current_position[0] << std::endl
+                             << "Y is: " << current_position[1] << std::endl
+                                << "Z is: " << current_position[2] << std::endl
+                                   << "*************************************************" << std::endl;
+
+    /*
     std::vector<double> start_pose = {0.05,-0.15,0.2};
     std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
     std::vector<double> home_position = {0.05,-0.15,0.2};
-
     //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
     km.goto_desired_position(start_pose);
     km.goto_desired_position(pose);
     km.goto_desired_position(home_position);
     km.position_gripper();
-    return 0;
-    /*
     //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
     unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
     std::vector<unsigned char> reduced_actuator_id (tmp1, tmp1 + 7);
