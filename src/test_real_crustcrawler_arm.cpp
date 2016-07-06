@@ -38,15 +38,15 @@ int main(int argc, char **argv)
     //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
     unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
     std::vector<unsigned char> reduced_actuator_id (tmp1, tmp1 + 7);
-    float tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
-    std::vector<float> initial_joint_values (tmp, tmp + 8);
-    float prim_distance = -0.05;
+    double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> initial_joint_values (tmp, tmp + 8);
+    double prim_distance = -0.05;
     //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
 
     //instantiate a variable of kinematic class
 
-    std::vector<float> joints_speeds(reduced_actuator_id.size(),0.0);
-    std::vector<float> joints_velocity,last_angles,my_last_angles,target_position(3),home_position,current_position;
+    std::vector<double> joints_speeds(reduced_actuator_id.size(),0.0);
+    std::vector<double> joints_velocity,last_angles,my_last_angles,target_position(3),home_position,current_position;
 
 //    duration = d;
     Real robot;
@@ -66,9 +66,9 @@ int main(int argc, char **argv)
     km.control_inverse_initialize(pose,last_angles);
     bool stressed = false;
     //avariable to read joints loads and show them
-    std::vector <float> joints_loads;
+    std::vector <double> joints_loads;
     //perform the trajectory in the desired time:
-    float duration = km.public_duration;
+    double duration = km.public_duration;
     //first initialize a timer
     boost::timer initial_time_here;
 

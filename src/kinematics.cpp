@@ -36,6 +36,7 @@ Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
             p6 = Params::p6_height /*0.021*/,
             gripper_height = Params::gripper_height /*0.171*/;
      //double body = 0.05, p1 = 0.056, p2 = 0.23, p3 = 0.155, p4 = 0.08, p5 = 0.07, p6 = 0.021, gripper_height = 0.171;
+
     /* This is the geometric representation of the robot according to Khalil-Kleinfinger notation, the additional colomn is to represent the type of the joint it is 0 for
      * revolute, 1 for translational and 2 for fixed joint, it will be useful later for the dynamic model if needed, for more details refer to : "Modeling and Control of
      * Manipulators Part I: Geometric and Kinematic Models" by Wisama KHALIL [1]
@@ -301,7 +302,7 @@ void Kinematics::releave(){
     control_inverse_initialize(target_position,last_angles);
 
     //avariable to read joints loads and show them
-    //std::vector <float> joints_loads;
+    //std::vector <double> joints_loads;
     //perform the trajectory in the desired time:
 
     //first initialize a timer
