@@ -98,6 +98,11 @@ public :
     void goto_desired_position(std::vector<double> desired_position);
 
     /**
+     * TBD
+     */
+    void goto_desired_position_without_stress(std::vector<double> desired_position);
+
+    /**
      * @brief positioning the gripper to a predefined pose.
      * @param no parameters needed
      * @return nothing but guide the gripper to desired pose
