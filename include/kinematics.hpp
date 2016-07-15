@@ -29,10 +29,10 @@ private :
 
     //variables definition
     std::vector<double> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
-    double rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
+    double rt,rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
     double duration; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
-    const double max_speed = 1.;
-    const double max_load = 0.3;
+    const double max_speed = 1.0,max_angular_speed = 1.0;
+    const double max_load = 0.5;
 public :
 
     Kinematics()
@@ -41,11 +41,18 @@ public :
     }
 
     /**
-     * @brief initializing necessary variables to guide the arm to a desired Cartesian position.
+     * @brief initializing necessary variables to guide the arm to a desired Cartesian position in velocity mode.
      * @param desired position, x, y and z coordinates
      * @return nothing but initialization of appropriate variables
      */
     void init_motion(std::vector<double> desired_position);
+
+    /**
+     * @brief initializing necessary variables to guide the arm to a desired Cartesian position in position mode.
+     * @param desired position, x, y and z coordinates
+     * @return nothing but initialization of appropriate variables
+     */
+    //void init_motion_position(std::vector<double> desired_position);
 
     /**
      * @brief compute jacobian matrix for the current arm configurations (current joints angle).
@@ -80,7 +87,14 @@ public :
      * @param desired joints positions (waypoint), a vector (q)
      * @return nothing but it guides the arm to the desired joints angles in position mode
      */
-    void goto_desired_joints_angles_position_mode(std::vector<double> desired_joints_angles);
+    bool goto_desired_joints_angles_position_mode(std::vector<double> desired_joints_angles);
+
+    /**
+     * @brief use the inverse kinematic to return the final values for joints angles to go to a desired position.
+     * @param desired position, x, y and z coordinates
+     * @return nothing but return final joints values to go to this desired position
+     */
+    std::vector<double> return_final_joints_values(std::vector<double> desired_position, std::vector<double>& joints_values);
 
     /**
      * @brief This method performs the control of the robot in the 3D operational space, based on inversed jacobian. (The orientation of the gripper is not considered yet.)
@@ -91,16 +105,25 @@ public :
     std::vector<double> control_inverse(std::vector<double> actual_joint_pos, double duration, double current_time);
 
     /**
-     * @brief use invers kinematic method to guide the arm to a desired Cartesian position.
+     * @brief use invers kinematic method to guide the arm to a desired Cartesian position in joints velocity mode, while monitoring joints torques for safety.
      * @param desired position, x, y and z coordinates
-     * @return nothing but guide the arm to the desired position
+     * @return nothing but guide the arm to the desired position in joints velocity mode
      */
     void goto_desired_position(std::vector<double> desired_position);
 
     /**
-     * TBD
+     * @brief use invers kinematic method to guide the arm to a desired Cartesian position in joints velocity mode, without monitoring joints torques.
+     * @param desired position, x, y and z coordinates
+     * @return nothing but guide the arm to the desired position in joints velocity mode
      */
     void goto_desired_position_without_stress(std::vector<double> desired_position);
+
+    /**
+     * @brief use invers kinematic method to guide the arm to a desired Cartesian position in joints position mode, while monitoring joints torques for safety.
+     * @param desired position, x, y and z coordinates
+     * @return nothing but guide the arm to the desired position in joints position mode
+     */
+    bool goto_desired_position_in_position_mode(std::vector<double> desired_position, std::vector<double>& joints_values);
 
     /**
      * @brief positioning the gripper to a predefined pose.

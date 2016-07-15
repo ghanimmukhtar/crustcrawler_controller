@@ -1,4 +1,5 @@
 #include "kinematics.hpp"
+#include <fstream>
 #include <iostream>
 #include <typeinfo>
 
@@ -10,7 +11,9 @@ using namespace robot;
  * these variables are defined here because they are global besides i had trouble initializing them in the kinematic header file, may be their placement will be changed later
 */
 //This defines the euclidean distance between initial_pos and target position for x, y and z coordinates
-Eigen::VectorXd distance(3);
+Eigen::VectorXd distance(3),joints_distance(6);
+std::vector<double> start_position, current_cart_position;
+std::ofstream desired_velocity,feedback_velocity, desired_pose,fdb_position;
 
 /*This defines the angles of each joint upon which the geometric parameters table was built, this means that these angles are the zero position and each joint angle should be
  * measured with reference to them
@@ -27,14 +30,14 @@ std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
 Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
 {
     //robot description (dimensions of each link and joint)
-    double body = Params::body_height/*0.05*/,
-            p1 = Params::p1_height/*0.056*/,
-            p2 = Params::p2_height/*0.23*/,
-            p3 = Params::p3_height /*0.155*/,
-            p4 = Params::p4_height /*0.08*/,
-            p5 = Params::p5_height/*0.07*/,
-            p6 = Params::p6_height /*0.021*/,
-            gripper_height = Params::gripper_height /*0.171*/;
+    double body = Params::body_height,
+            p1 = Params::p1_height,
+            p2 = Params::p2_height,
+            p3 = Params::p3_height,
+            p4 = Params::p4_height,
+            p5 = Params::p5_height,
+            p6 = Params::p6_height,
+            gripper_height = Params::gripper_height;
      //double body = 0.05, p1 = 0.056, p2 = 0.23, p3 = 0.155, p4 = 0.08, p5 = 0.07, p6 = 0.021, gripper_height = 0.171;
 
     /* This is the geometric representation of the robot according to Khalil-Kleinfinger notation, the additional colomn is to represent the type of the joint it is 0 for
@@ -185,10 +188,8 @@ void Kinematics::control_inverse_initialize(std::vector<double> target_pos, std:
 
     //std::cout << "distance norm" << distance.norm() << std::endl;
     duration = 7.5*distance.norm()/max_speed;
-    //std::cout << "duration" << duration << std::endl;
-    std::cout << "Distance to be covered: \n" << distance << std::endl;
-    //std::cout << "duration" << duration << std::endl;
-//    std::cout << "Distance to be covered: \n" << distance << std::endl;
+    //std::cout << "duration is: " << duration << std::endl;
+    //std::cout << "Distance to be covered: \n" << distance << std::endl;
 }
 
 
@@ -203,6 +204,10 @@ std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint
     Eigen::MatrixXd jt(jacobian(actual_joint_values));
     //use only the first three rows as the task space is limited to the three cartesian positions only
     Eigen::MatrixXd jt_p = jt.block<3, 6>(0, 0);
+    //if(fabs((jt_p * jt_p.transpose()).determinant()) < 0.00008){
+     //   std::cout << "jacobian determinant is less than 0.01: " << std::endl;
+     //   std::cout << (jt_p * jt_p.transpose()).determinant() << std::endl;
+    //}
 
     //Part for joints limits avoidance
     Eigen::MatrixXd Id = Eigen::MatrixXd::Identity(6, 6);
@@ -219,7 +224,7 @@ std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint
     double delta_j_limit = M_PI;
     Z = 2 * a * joint_val / (delta_j_limit * delta_j_limit);
 
-
+    //std::cout << " ******************** i am here ************************ " << std::endl;
     //this will be the output of the function, it is constructed each iteration to ensure its emptyness
     std::vector<double> joints_velocity;
 
@@ -228,6 +233,9 @@ std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint
     rtdot = (30 * pow(current_time, 2)) / pow(duration, 3) - (60 * pow(current_time, 3)) / pow(duration, 4) +
             (30 * pow(current_time, 4)) / pow(duration, 5);
     desired_kinematic_twist << rtdot * distance(0), rtdot * distance(1), rtdot * distance(2);
+    /*start_position[0] = start_position[0] + desired_kinematic_twist(0)*0.03;
+    start_position[1] = start_position[1] + desired_kinematic_twist(1)*0.03;
+    start_position[2] = start_position[2] + desired_kinematic_twist(2)*0.03;*/
 
     Eigen::MatrixXd invJt_p(6, 3);
     pseudo_inverse(jt_p, invJt_p);
@@ -244,9 +252,9 @@ std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint
     return joints_velocity;
 }
 
-//Guides the arm to desired position by setting joints velocities to proper values each iteration till the duration time is reached
-//for integrating the goto_desired_position method with CAFER we decided to split it into two parts: initialization part (init_motion(target)) which will be kept here, then the
-//while loop will be moved to controller_node
+/*Guides the arm to desired position by setting joints velocities to proper values each iteration till the duration time is reached
+  for integrating the goto_desired_position method with CAFER we decided to split it into two parts: initialization part (init_motion(target)) which will be kept here, then the
+  while loop will be moved to controller_node*/
 void Kinematics::init_motion(std::vector<double> desired_position)
 {
     std::vector<double> joints_speeds(7);
@@ -272,6 +280,34 @@ void Kinematics::init_motion(std::vector<double> desired_position)
     //initialize the inverse kinematic to get the distance to be covered
     control_inverse_initialize(desired_position, last_angles);
 }
+
+/*Guides the arm to desired position by setting joints positions to proper values each iteration till the duration time is reached
+  for integrating the goto_desired_position_in_position mode method with CAFER we decided to split it into two parts: initialization part (init_motion_position(target)) which will be kept here, then the
+  while loop will be moved to controller_node
+void Kinematics::init_motion_position(std::vector<double> desired_position)
+{
+    std::vector<double> joints_speeds(7);
+    std::vector<double> last_angles;
+    Real robot;
+    //set motors speed to zero so that they start from static situation
+    for (int k = 0; k < reduced_actuator_id.size(); k++) {
+        joints_speeds[k] = max_angular_speed;
+    }
+    robot.getArm().set_joint_speeds(joints_speeds, reduced_actuator_id);
+
+    //prepare motors to receive commands in velocity (change them to wheel mode)
+    robot.getArm().mode_speed(reduced_actuator_id);
+
+    //get the feedback about current joints angles, using the method defined in RobotArm.cpp, which actually returns the angle as a fraction of (pi), so we multiply it by (pi)
+    //to get it in radian. After that we need to define it relevant to values given in initial_joint_values, as mentioned earlier.
+    last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
+    for (int i = 0; i < last_angles.size(); i++) {
+        last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
+    }
+
+    //initialize the inverse kinematic to get the distance to be covered
+    control_inverse_initialize(desired_position, last_angles);
+}*/
 
 void Kinematics::releave(){
     std::cout << "i am stressed ******************************" << std::endl;
@@ -315,7 +351,7 @@ void Kinematics::releave(){
         last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
         for (int i = 0; i < last_angles.size(); i++)
             last_angles[i] = M_PI*last_angles[i] - initial_joint_values[i];
-        std::cout << "************** i am here doing releave motion ****************" << std::endl;
+        //std::cout << "************** i am here doing releave motion ****************" << std::endl;
         /*solve for current desired joints speeds, and it appears that the return speeds are actually in RPS (Revolution Per Second) rather than radian/sec, more analysis is to
          * be carried out to see exactly why it gives this, but for the moment it simply means they don't any conversio except for converting them to RPM (Revolution Per Minute)
          * as this what the crustcrawler motors expect as speed command, this is done in the method (set_joint_speeds()) which belongs to robotArm class
@@ -333,10 +369,12 @@ void Kinematics::releave(){
     robot.getArm().close_usb_controllers();
 }
 
+
 void Kinematics::goto_desired_position(std::vector<double> desired_position){
     std::vector<double> joints_speeds(7);
     std::vector<double> joints_velocity,last_angles,my_last_angles;
 //    duration = d;
+
     Real robot;
 
         //set motors speed to zero so that they start from static situation
@@ -371,7 +409,7 @@ void Kinematics::goto_desired_position(std::vector<double> desired_position){
     {
         joints_loads = robot.getArm().get_joint_loads(reduced_actuator_id);
         for(int i = 0;i < joints_loads.size();i++){
-            std::cout << joints_loads[i] << std::endl;
+            //std::cout << joints_loads[i] << std::endl;
             if (joints_loads[i] > max_load){
                 stressed = true;
                 break;
@@ -410,8 +448,11 @@ void Kinematics::goto_desired_position(std::vector<double> desired_position){
 
 void Kinematics::goto_desired_position_without_stress(std::vector<double> desired_position){
     std::vector<double> joints_speeds(7);
-    std::vector<double> joints_velocity,last_angles,my_last_angles;
+    std::vector<double> joints_velocity,last_angles,my_last_angles,vel_fdb;
+    desired_velocity.open("my_des_vel.csv"); feedback_velocity.open("my_fdb_vel.csv");
+    desired_pose.open("desired_position.csv"); fdb_position.open("feedback_position.csv");
 //    duration = d;
+
     Real robot;
 
         //set motors speed to zero so that they start from static situation
@@ -429,38 +470,66 @@ void Kinematics::goto_desired_position_without_stress(std::vector<double> desire
         for (int i = 0; i < last_angles.size(); i++) {
             last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
         }
-
+    start_position = forward_model(last_angles);
+    current_cart_position = start_position;
+    desired_pose << start_position[0] << "," << start_position[1] << "," << start_position[2] << "\n";
+    fdb_position << current_cart_position[0] << ","<< current_cart_position[1] << ","<< current_cart_position[2] << "\n";
     //initialize the inverse kinematic to get the distance to be covered
     control_inverse_initialize(desired_position, last_angles);
 
+    //double my_time = 0.0, iteration_duration = 0.0;
     //first initialize a timer
     boost::timer initial_time_here;
 
     //Then for the specified duration calculate each iteration the proper joints velocities and set them
     while(initial_time_here.elapsed() < duration)
     {
+
+        //my_time = initial_time_here.elapsed();
         //at each iteration get the current joint angles, as described before
         my_last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
         for (int i = 0; i < my_last_angles.size(); i++)
             last_angles[i] = M_PI*my_last_angles[i] - initial_joint_values[i];
+        current_cart_position = forward_model(last_angles);
         /*solve for current desired joints speeds, and it appears that the return speeds are actually in RPS (Revolution Per Second) rather than radian/sec, more analysis is to
          * be carried out to see exactly why it gives this, but for the moment it simply means they don't any conversio except for converting them to RPM (Revolution Per Minute)
          * as this what the crustcrawler motors expect as speed command, this is done in the method (set_joint_speeds()) which belongs to robotArm class
         */
         joints_velocity = control_inverse(last_angles,duration,initial_time_here.elapsed());
+        //joints_velocity[2] = 3*joints_velocity[2];
         //set joints velocities
         robot.getArm().set_joint_speeds(joints_velocity,reduced_actuator_id);
+        //vel_fdb = robot.getArm().get_joint_speeds(reduced_actuator_id);
+        //desired_velocity << joints_velocity[0] << "," << joints_velocity[1] << "," << joints_velocity[2] << "," << joints_velocity[3] << "," << joints_velocity[4] << "," <<
+                                                   //joints_velocity[5] << "," << "\n";
+        //feedback_velocity << vel_fdb[0] << "," << vel_fdb[1] << "," << vel_fdb[2] << "," << vel_fdb[3] << "," << vel_fdb[4] << "," << vel_fdb[5] << "," << "\n";
+        desired_pose << start_position[0] << "," << start_position[1] << "," << start_position[2] << "\n";
+        fdb_position << current_cart_position[0] << ","<< current_cart_position[1] << ","<< current_cart_position[2] << "\n";
         /*joints_loads = robot.getArm().get_joint_loads(reduced_actuator_id);
         for(int i = 0;i < joints_loads.size();i++)
             std::cout << joints_loads[i] << std::endl;
         std::cout << "*****************************************" << std::endl;*/
+        //iteration_duration = initial_time_here.elapsed() - my_time;
+        //std::cout << "iteration time is: " << iteration_duration << std::endl;
+        //std::cout << "*****************************************" << std::endl;
     }
     robot.getArm().set_speeds_to_zero(reduced_actuator_id);
+    //desired_velocity.close();
+    //feedback_velocity.close();
+    desired_pose.close();
+    fdb_position.close();
     //the end effector should be now at the desired position, so finish the program and close the crustcrawler communication bus
     robot.getArm().close_usb_controllers();
 }
 
-
+bool Kinematics::goto_desired_position_in_position_mode(std::vector<double> desired_position,std::vector<double>& joints_values){
+    std::vector<double> joints_f_values;
+    joints_f_values = return_final_joints_values(desired_position,joints_values);
+    bool output = goto_desired_joints_angles_position_mode(joints_f_values);
+    //for(int i=0;i<joints_f_values.size();i++)
+      //  std::cout << "theoritical finishing angle for joint: " << i << " is: " << joints_f_values[i] << std::endl;
+    return output;
+}
 
 void Kinematics::position_gripper(){
     std::vector<double> pos = {0.35f,-0.35f};
@@ -526,7 +595,7 @@ void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<double> de
         std::cout << "speed of important joint is: " << joints_velocity[2] * 60 << std::endl;
         time_passed = time_here.elapsed();
     }
-    std::cout << "final loop duration is: " << time_here.elapsed() << std::endl;
+    //std::cout << "final loop duration is: " << time_here.elapsed() << std::endl;
     starting_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
     for (int i = 0; i < 6; i++) {
         std::cout << "finishing angle for joint: " << i << " is: " << M_PI * starting_angles[i] << std::endl;
@@ -535,33 +604,114 @@ void Kinematics::goto_desired_joints_angles_velocity_mode(std::vector<double> de
     robot.getArm().close_usb_controllers();
 }
 
-//Guides the real arm to desired joints angles using position mode but limiting the velocity by which actuators goes to these angles
-void Kinematics::goto_desired_joints_angles_position_mode(std::vector<double> desired_joints_angles)
+
+std::vector<double> Kinematics::return_final_joints_values(std::vector<double> desired_position, std::vector<double>& joints_values){
+    std::vector<double> joints_velocity,last_angles,my_angles;
+    Real robot;
+
+    //get the feedback about current joints angles, using the method defined in RobotArm.cpp, which actually returns the angle as a fraction of (pi), so we multiply it by (pi)
+    //to get it in radian. After that we need to define it relevant to values given in initial_joint_values, as mentioned earlier.
+    last_angles = robot.getArm().get_joint_values(reduced_actuator_id);
+    for (int i = 0; i < last_angles.size(); i++)
+        my_angles.push_back(M_PI * last_angles[i]);
+    for (int i = 0; i < last_angles.size(); i++) {
+        last_angles[i] = M_PI * last_angles[i] - initial_joint_values[i];
+    }
+
+
+    //initialize the inverse kinematic to get the distance to be covered
+    control_inverse_initialize(desired_position, last_angles);
+
+    //first initialize a timer
+    double my_time = 0.0, dt = 0.003;
+
+    //Then for the specified duration calculate each iteration the proper joints velocities and set them
+    while(my_time < duration)
+    {
+
+        /*solve for current desired joints speeds, and it appears that the return speeds are actually in RPS (Revolution Per Second) rather than radian/sec, more analysis is to
+         * be carried out to see exactly why it gives this, but for the moment it simply means they don't any conversio except for converting them to RPM (Revolution Per Minute)
+         * as this what the crustcrawler motors expect as speed command, this is done in the method (set_joint_speeds()) which belongs to robotArm class
+        */
+        joints_velocity = control_inverse(last_angles,duration,my_time);
+
+        //at each iteration integrate the joint velocity to update joints angles for the inverse model so use the adapted angles
+        for (int i = 0; i < last_angles.size(); i++)
+            last_angles[i] = last_angles[i] + joints_velocity[i] * dt;
+        //at each iteration integrate the joint velocity to update joints angles (the absolute one which the method shall return at the end
+        for (int i = 0; i < my_angles.size(); i++){
+            my_angles[i] = my_angles[i] + joints_velocity[i] * dt;
+            joints_values.push_back(my_angles[i]);
+        }
+        my_time = my_time + dt;
+    }
+    //the end effector should be now at the desired position, so finish the program and close the crustcrawler communication bus
+    robot.getArm().close_usb_controllers();
+    return my_angles;
+}
+
+//Guides the real arm to desired joints angles using position, the input is six desired angles
+bool Kinematics::goto_desired_joints_angles_position_mode(std::vector<double> desired_joints_angles)
 {
     //this will be the velocity command send to the joints
-    std::vector<double> joints_speeds(7);
+    std::vector<double> joints_speeds(7),starting_angles,q_des;
 
     //instantiate a robot class to use for controlling the arm
     Real robot;
-    for (int i = 0; i < 6; i++) {
+
+    for (int i = 0; i < desired_joints_angles.size(); i++) {
         desired_joints_angles[i] = desired_joints_angles[i] / M_PI;
     }
 
     robot.getArm().mode_position(reduced_actuator_id);
     //set motors speeds to a desired speeds that will be used to reach the value of each joint
     for (int k = 0; k < reduced_actuator_id.size(); k++) {
-        joints_speeds[k] = 70.0;
+        joints_speeds[k] = max_angular_speed;
     }
     robot.getArm().set_joint_speeds(joints_speeds, reduced_actuator_id);
-
-    robot.getArm().set_joint_values(desired_joints_angles, reduced_actuator_id);
-    std::vector<double> finishing_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
-    for (int i = 0; i < 6; i++) {
-        std::cout << "finishing angle for joint: " << i << " is: " << M_PI * finishing_angles[i] << std::endl;
+    starting_angles = robot.getArm().get_joint_values(reduced_actuator_id);
+    q_des = starting_angles;
+    joints_distance << desired_joints_angles[0] - starting_angles[0], desired_joints_angles[1] - starting_angles[1], desired_joints_angles[2] - starting_angles[2],
+                       desired_joints_angles[3] - starting_angles[3], desired_joints_angles[4] - starting_angles[4], desired_joints_angles[5] - starting_angles[5];
+    duration = 7.5*joints_distance.norm()/max_angular_speed;
+    //boolean variable to know when the arm is overlaoded
+    bool stressed = false;
+    //avariable to read joints loads and show them
+    std::vector <double> joints_loads;
+    boost::timer my_timer;
+    while(my_timer.elapsed()<duration){
+        joints_loads = robot.getArm().get_joint_loads(reduced_actuator_id);
+        for(int i = 0;i < joints_loads.size();i++){
+            //std::cout << joints_loads[i] << std::endl;
+            if (joints_loads[i] > max_load){
+                stressed = true;
+                break;
+            }
+        }
+        if (stressed)
+            break;
+        rt = 10 * pow((my_timer.elapsed()/duration),3) - 15 * pow((my_timer.elapsed()/duration),4) + 6 * pow((my_timer.elapsed()/duration),5);
+        for (int i = 0; i < q_des.size(); i++)
+            q_des[i] = starting_angles[i] + rt * joints_distance[i];
+        robot.getArm().set_joint_values(q_des, reduced_actuator_id);
+    }
+    //std::vector<double> finishing_angles = robot.getArm().get_joint_values(reduced_actuator_id);;
+    //for (int i = 0; i < q_des.size(); i++) {
+      //  std::cout << "finishing angle for joint: " << i << " is: " << M_PI * q_des[i] << std::endl;
+    //}
+    //if the arm collides with fixed obstacles stop the motion and releave the arm
+    if (stressed){
+        std::cout << "i am stressed ******************************" << std::endl;
+        q_des[1] = 0; q_des[2] = -1.5/M_PI;
+        robot.getArm().set_joint_values(q_des, reduced_actuator_id);
+        stressed = false;
+        return false;
     }
     //the joints should be now at their desired angles, so finish the program and close the crustcrawler communication bus
     robot.getArm().close_usb_controllers();
+    return true;
 }
+
 
 //starting from the current position of the end effector this method will make the end effector goes for small distance in a forward sense
 void Kinematics::primitive_motion(){
@@ -585,6 +735,7 @@ void Kinematics::primitive_motion(){
     target_position[1] = current_position[1] + prim_distance * sin(angle);
     target_position[2] = current_position[2];
 
+    std::vector<double> dummy;
     //perform the motion using the method goto_desired_position
-    goto_desired_position(target_position);
+    goto_desired_position_in_position_mode(target_position, dummy);
 }

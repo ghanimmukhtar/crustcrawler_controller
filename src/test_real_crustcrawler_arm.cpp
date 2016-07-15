@@ -1,22 +1,25 @@
 #include <iostream>
 #include <cmath>
-#include "../include/arm_controller.hpp"
-#include "../include/kinematics.hpp"
-#include "robotArm.hpp"
+#include "kinematics.hpp"
 
 Kinematics km;
-Real robot;
+Real my_robot;
 
-double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
-std::vector<double> initial_joint_values(tmp, tmp + 8);
-unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
-std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
+//double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+//std::vector<double> initial_joint_values(tmp, tmp + 8);
+std::vector<double> my_initial_joint_values = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
+std::vector<double> my_start_joint_values = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0};
+//unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
+//std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
+std::vector<unsigned char> my_reduced_actuator_id = {1, 2, 3, 4, 5, 6, 7};
 std::vector<double> joints_values(7), current_position;
 
 void locate_end_effector(){
-joints_values = robot.getArm().get_joint_values(reduced_actuator_id);
+joints_values = my_robot.getArm().get_joint_values(my_reduced_actuator_id);
+for(int i=0;i<joints_values.size();i++)
+    std::cout << "current joint value for joint: " << i << " is: " << M_PI * joints_values[i] << std::endl;
 for (int i = 0; i < joints_values.size(); i++) {
-    joints_values[i] = M_PI * joints_values[i] - initial_joint_values[i];
+    joints_values[i] = M_PI * joints_values[i] - my_initial_joint_values[i];
 }
 current_position = km.forward_model(joints_values);
 
@@ -31,14 +34,25 @@ int main(int argc, char **argv)
     std::vector<double> start_pose = {0.05,-0.15,0.2};   
     std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
     std::vector<double> home_position = {0.05,-0.15,0.2};
+    //km.goto_desired_position_in_position_mode(pose);
+    //km.return_final_joints_values(pose);
+    locate_end_effector();
+    /*
+    for(int i=0;i<joints_f_values.size();i++)
+        joints_f_values[i] = joints_f_values[i] - my_start_joint_values[i];
+    std::cout << " **************** i am here ********************* " << std::endl;
+    final_pose = km.forward_model(joints_f_values);
+    for(int i=0;i<final_pose.size();i++)
+        std::cout << "value of coordinate: " << i << " is: " << final_pose[i] << std::endl;*/
     //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
-    km.goto_desired_position(start_pose);
-    locate_end_effector();
-    km.goto_desired_position(pose);
-    locate_end_effector();
-    km.goto_desired_position(home_position);
-    km.position_gripper();
-    locate_end_effector();
+    //locate_end_effector();
+    //km.goto_desired_position_without_stress(start_pose);
+    //locate_end_effector();
+    //km.goto_desired_position(pose);
+    //locate_end_effector();
+    //km.goto_desired_position_without_stress(home_position);
+    //km.position_gripper();
+    //locate_end_effector();
     return 0;
 
     /*

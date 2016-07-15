@@ -53,7 +53,7 @@ void RobotArm::init()
         changeIValue(20);
         changeDValue(0);*/
         changePValue(32);
-        changeIValue(0);
+        changeIValue(10);
         changeDValue(0);
 
     }
@@ -236,7 +236,7 @@ std::vector<double> RobotArm::get_joint_loads(std::vector<byte_t> actuators_ids)
             return std::vector<double>(1, 100);
         }
     }
-        usleep(1e3);
+        //usleep(1e1);
 
     return current_load;
 }
@@ -301,6 +301,7 @@ bool RobotArm::set_joint_speeds(std::vector<double> values, std::vector <byte_t>
             */
             if (speed_value > 200) {
                 vel[i] = 200;
+                std::cout << "********* hi i am too fast *****************" << std::endl;
 
             }
             else {
