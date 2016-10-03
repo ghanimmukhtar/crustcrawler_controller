@@ -76,7 +76,7 @@ Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
     kk <<      0,         0,          0,       a[0],       body+p1,
                0,       M_PI/2,       0,       a[1],           0,
                0,         0,         p2,       a[2],           0,
-               0,      -M_PI/2,       0,       a[3],           0.14,  //p3+p4,
+               0,      -M_PI/2,       0,       a[3],           0.21,  //p3+p4,
                0,       M_PI/2,       0,       a[4],           0,
                0,      -M_PI/2,       0,       a[5],  gripper_height+p5+p6;
     return kk;
@@ -653,7 +653,7 @@ void Kinematics::goto_desired_position_inverse_geometrically(std::vector<double>
     TT = TF_E*TE_6;
     //find joints angles
     //double Px = desired_position[0], Py = desired_position[1], Pz = desired_position[2], D3 = robot::Params::p2_height, RL4 = robot::Params::p3_height + robot::Params::p4_height;
-    double Px = TT(0,3), Py = TT(1,3), Pz = TT(2,3), D3 = Params::p2_height, RL4 = 0.14;//robot::Params::p3_height + robot::Params::p4_height;
+    double Px = TT(0,3), Py = TT(1,3), Pz = TT(2,3), D3 = Params::p2_height, RL4 = 0.21;//robot::Params::p3_height + robot::Params::p4_height;
     //q1
     double q1 = atan2(Py, Px);
     joints_angles.push_back(q1);
