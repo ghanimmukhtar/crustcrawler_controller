@@ -30,7 +30,8 @@ private :
     //variables definition
     std::vector<double> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
     double rt,rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
-    double duration; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
+    double duration, my_alpha; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
+    Eigen::Vector3d u;
     const double max_speed = 1.0,max_angular_speed = 1.0;
     const double max_load = 0.5;
 public :
@@ -39,6 +40,13 @@ public :
     {
         duration = 6;
     }
+
+    /**
+     * @brief Calculating the rotation matrix for a given angle and axis.
+     * @param the axis of rotation, and the angle
+     * @return 3x3 rotation matrix
+     */
+    Eigen::Matrix3d Rot(char axis, double angle) const;
 
     /**
      * @brief initializing necessary variables to guide the arm to a desired Cartesian position in velocity mode.
@@ -124,6 +132,13 @@ public :
      * @return nothing but guide the arm to the desired position in joints position mode
      */
     bool goto_desired_position_in_position_mode(std::vector<double> desired_position, std::vector<double>& joints_values);
+
+    /**
+     * @brief use invers geometric method to guide the arm to a desired pose by finding, analytically, joints positions, while monitoring joints torques for safety.
+     * @param desired pose, x, y and z coordinates and orientations, Roll, Pitch and Yaw
+     * @return nothing but guide the arm to the desired pose in joints position mode
+     */
+    void goto_desired_position_inverse_geometrically(std::vector<double> desired_position);
 
     /**
      * @brief positioning the gripper to a predefined pose.

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <math.h>
 #include "kinematics.hpp"
 
 Kinematics km;
@@ -31,30 +32,35 @@ std::cout << "X is: " << current_position[0] << std::endl
 
 int main(int argc, char **argv)
 {
-    std::vector<double> start_pose = {0.05,-0.15,0.2};   
-    std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
-    std::vector<double> home_position = {0.05,-0.15,0.2};
-    //km.goto_desired_position_in_position_mode(pose);
-    //km.return_final_joints_values(pose);
+    std::vector<double> start_pose = {0.05,-0.15,0.2}, joints_values;
+    //std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3]),atof(argv[4]),atof(argv[5]),atof(argv[6])};
+    double angle = atan2(atof(argv[2]),atof(argv[1]));
+    std::cout << "angle is: " <<  angle << std::endl;
+    std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3]),0,2.8,angle};
+    km.goto_desired_position_inverse_geometrically(pose);
     locate_end_effector();
     /*
+    std::vector<double> home_position = {0.05,-0.15,0.2};
+    std::vector<double> desired_angles = {-0.775,0.3,-1.5708,-0.775,-1.5708,0.5};
+    km.goto_desired_joints_angles_position_mode(desired_angles);
+    locate_end_effector();
+    km.goto_desired_position_in_position_mode(pose,joints_values);
+    km.return_final_joints_values(pose);
     for(int i=0;i<joints_f_values.size();i++)
         joints_f_values[i] = joints_f_values[i] - my_start_joint_values[i];
     std::cout << " **************** i am here ********************* " << std::endl;
     final_pose = km.forward_model(joints_f_values);
     for(int i=0;i<final_pose.size();i++)
-        std::cout << "value of coordinate: " << i << " is: " << final_pose[i] << std::endl;*/
-    //use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
-    //locate_end_effector();
-    //km.goto_desired_position_without_stress(start_pose);
-    //locate_end_effector();
-    //km.goto_desired_position(pose);
-    //locate_end_effector();
-    //km.goto_desired_position_without_stress(home_position);
-    //km.position_gripper();
-    //locate_end_effector();
-    return 0;
-
+        std::cout << "value of coordinate: " << i << " is: " << final_pose[i] << std::endl;
+    use the method goto_desired_position(std::vector<float> target_position) to guide the end effector to the desired position
+    locate_end_effector();
+    km.goto_desired_position_without_stress(start_pose);
+    locate_end_effector();
+    km.goto_desired_position(pose);
+    locate_end_effector();
+    km.goto_desired_position_without_stress(home_position);
+    km.position_gripper();
+    locate_end_effector();*/
     /*
     //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
     unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
@@ -147,4 +153,5 @@ int main(int argc, char **argv)
     //the end effector should be now at the desired position, so finish the program and close the crustcrawler communication bus
     robot.getArm().close_usb_controllers();
     */
+    return 0;
 }

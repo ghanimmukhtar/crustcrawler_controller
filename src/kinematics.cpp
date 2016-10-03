@@ -25,6 +25,33 @@ std::vector<double> initial_joint_values(tmp, tmp + 8);
 unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
 std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
 
+//This is a function that takes as inputs: a character that name an axis (x, y or z), and a double that represents an angle of rotation about that axis. It returns the corresponding rotation matrix (3x3)
+Eigen::Matrix3d Kinematics::Rot(char axis, double angle) const{
+    Eigen::Matrix3d RotX,RotY,RotZ,empty_Rot;
+    if (axis == 'x'){
+        RotX << 1,          0,           0,
+                0, cos(angle), -sin(angle),
+                0, sin(angle),  cos(angle);
+        return RotX;
+    }
+    else if (axis == 'y'){
+        RotY << cos(angle),  0, sin(angle),
+                         0,  1,          0,
+               -sin(angle),  0, cos(angle);
+        return RotY;
+    }
+    else if (axis == 'z'){
+        RotZ << cos(angle), -sin(angle), 0,
+                sin(angle),  cos(angle), 0,
+                         0,           0, 1;
+        return RotZ;
+    }
+    else{
+        std::cout << "enter valid coordinate: X, Y or Z -------------------------------------------------" << std::endl;
+        return empty_Rot;
+    }
+
+}
 
 //geometric parameters according to the choosing initial configurations defined by initial_joint_values
 Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
@@ -46,12 +73,12 @@ Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
      * */
     Eigen::MatrixXd kk(6, 5);
     //---|---sigma---|---alpha_j---|---d_j---|---q_j--------|---r_j---|
-    kk << 0, 0, 0, a[0], body + p1,
-            0, M_PI / 2, 0, a[1], 0,
-            0, 0, p2, a[2] + (M_PI / 2), 0,
-            0, 0, p3, a[3], 0,
-            0, 0, p4, a[4] - (M_PI / 2), 0,
-            0, -M_PI / 2, 0, a[5], gripper_height + p5 + p6;
+    kk <<      0,         0,          0,       a[0],       body+p1,
+               0,       M_PI/2,       0,       a[1],           0,
+               0,         0,         p2,       a[2],           0,
+               0,      -M_PI/2,       0,       a[3],           0.14,  //p3+p4,
+               0,       M_PI/2,       0,       a[4],           0,
+               0,      -M_PI/2,       0,       a[5],  gripper_height+p5+p6;
     return kk;
 }
 
@@ -167,14 +194,31 @@ std::vector<double> Kinematics::forward_model(const std::vector<double>& a) cons
      *  Yaw = atan2(sin(Roll)*T6(1,3) - cos(Roll)*T6(2,3),-sin(Roll)*T6(1,2) + cos(Roll)*T6(2,2)).
      * Refer to [1] for more details.
      * */
+    Pitch = asin(mat(0,2));
+    if (Pitch == M_PI/2)
+    {
+        Yaw = 0;
+        Roll = atan2(mat(1,0),-mat(2,0));
+    }
+    else if (Pitch == -M_PI/2)
+    {
+        Yaw = 0;
+        Roll = -atan2(mat(1,0),mat(2,0));
+    }
+    else
+    {
+        Yaw = atan2(-mat(0,1)/cos(Pitch),mat(0,0)/cos(Pitch));
+        Roll = atan2(-mat(1,2)/cos(Pitch),mat(2,2)/cos(Pitch));
+    }
+    /*
     Roll = atan2(mat(1, 0), mat(0, 0));
     Pitch = atan2(-mat(2, 0), cos(Roll) * mat(0, 0) + sin(Roll) * mat(1, 0));
     Yaw = atan2(sin(Roll) * mat(0, 2) - cos(Roll) * mat(1, 2), -sin(Roll) * mat(0, 1) + cos(Roll) * mat(1, 1));
-
+    */
     //complete the pose with orientation part
-    res.push_back(Yaw);
-    res.push_back(Pitch);
     res.push_back(Roll);
+    res.push_back(Pitch);
+    res.push_back(Yaw);
     return res;
 }
 
@@ -186,10 +230,40 @@ void Kinematics::control_inverse_initialize(std::vector<double> target_pos, std:
     //then deduce the distance vector using only the position part of the initial_pos vector, and the target position
     distance << target_pos[0] - initial_pos[0], target_pos[1] - initial_pos[1], target_pos[2] - initial_pos[2];
 
+    //orientation part
+    Eigen::Matrix3d Rfinal;
+    Eigen::Matrix3d Rinitial = Rot('x',initial_pos[3])*Rot('y',initial_pos[4])*Rot('z',initial_pos[5]);
+    if(target_pos[3] == 0.0 && target_pos[4] == 0.0 && target_pos[5] == 0.0)
+        Rfinal = Rinitial;
+    else
+        Rfinal = Rot('z',target_pos[5])*Rot('y',target_pos[4])*Rot('x',target_pos[3]);
+    //std::cout << "initial orientation is: " << std::endl << Rinitial << std::endl;
+    //std::cout << "final orientation should be: " << std::endl << Rfinal << std::endl;
+
+    //then deduce the difference between the intial and final points of a section in oreintation:
+    Eigen::Matrix3d RotuAlpha = Rfinal*Rinitial.transpose();
+
+    //then we extract the angle alpha:
+    double Calpha = 0.5*(RotuAlpha(0,0)+RotuAlpha(1,1)+RotuAlpha(2,2)-1);
+    double Salpha = 0.5*sqrt(pow(RotuAlpha(1,2) - RotuAlpha(2,1),2) + pow(RotuAlpha(2,0) - RotuAlpha(0,2),2) + pow(RotuAlpha(0,1) - RotuAlpha(1,0),2));
+    my_alpha = atan2(Salpha,Calpha);
+
+    //now that we have alpha let's deduce the vector u and skew symmetric which will be used to evaluate the evolution of the orientation with times
+    if (my_alpha == 0){
+        u = Eigen::VectorXd::Zero(3);
+    }
+    else{
+        u << (RotuAlpha(2,1)-RotuAlpha(1,2))/(2*Salpha),
+            (RotuAlpha(0,2)-RotuAlpha(2,0))/(2*Salpha),
+            (RotuAlpha(1,0)-RotuAlpha(0,1))/(2*Salpha);
+    }
+    //std::cout << "vector u is: " << std::endl << u << std::endl;
+
     //std::cout << "distance norm" << distance.norm() << std::endl;
-    duration = 7.5*distance.norm()/max_speed;
-    //std::cout << "duration is: " << duration << std::endl;
-    //std::cout << "Distance to be covered: \n" << distance << std::endl;
+    duration = std::max(7.5*u.norm()/max_speed,7.5*distance.norm()/max_speed);
+    //duration = 7.5*distance.norm()/max_speed;
+    std::cout << "duration is: " << duration << std::endl;
+    std::cout << "Distance to be covered: \n" << distance << std::endl;
 }
 
 
@@ -200,16 +274,19 @@ void Kinematics::control_inverse_initialize(std::vector<double> target_pos, std:
 std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint_values, double duration,
                                                 double current_time)
 {
+
     //get the jacobian for the current joints angles
     Eigen::MatrixXd jt(jacobian(actual_joint_values));
+
     //use only the first three rows as the task space is limited to the three cartesian positions only
-    Eigen::MatrixXd jt_p = jt.block<3, 6>(0, 0);
+    //Eigen::MatrixXd jt_p = jt.block<3, 6>(0, 0);
     //if(fabs((jt_p * jt_p.transpose()).determinant()) < 0.00008){
      //   std::cout << "jacobian determinant is less than 0.01: " << std::endl;
      //   std::cout << (jt_p * jt_p.transpose()).determinant() << std::endl;
     //}
 
-    //Part for joints limits avoidance
+    //Part for joints limits avoidance, it doesn't work when we include the orientation part because the jacobian is not redundant anymore
+    /*
     Eigen::MatrixXd Id = Eigen::MatrixXd::Identity(6, 6);
     Eigen::VectorXd Z(6);
     Eigen::VectorXd joint_val(6);
@@ -222,33 +299,44 @@ std::vector<double> Kinematics::control_inverse(std::vector<double> actual_joint
     double a = -.05;
 
     double delta_j_limit = M_PI;
-    Z = 2 * a * joint_val / (delta_j_limit * delta_j_limit);
+    Z = 2 * a * joint_val / (delta_j_limit * delta_j_limit);*/
 
     //std::cout << " ******************** i am here ************************ " << std::endl;
     //this will be the output of the function, it is constructed each iteration to ensure its emptyness
     std::vector<double> joints_velocity;
 
     //construct the twist for current iteration
-    Eigen::VectorXd desired_kinematic_twist(3);
+    Eigen::VectorXd desired_kinematic_twist(6);
     rtdot = (30 * pow(current_time, 2)) / pow(duration, 3) - (60 * pow(current_time, 3)) / pow(duration, 4) +
             (30 * pow(current_time, 4)) / pow(duration, 5);
-    desired_kinematic_twist << rtdot * distance(0), rtdot * distance(1), rtdot * distance(2);
+    desired_kinematic_twist << rtdot * distance(0), rtdot * distance(1), rtdot * distance(2), rtdot * my_alpha * u(0), rtdot * my_alpha * u(1), rtdot * my_alpha * u(2);
     /*start_position[0] = start_position[0] + desired_kinematic_twist(0)*0.03;
     start_position[1] = start_position[1] + desired_kinematic_twist(1)*0.03;
     start_position[2] = start_position[2] + desired_kinematic_twist(2)*0.03;*/
 
-    Eigen::MatrixXd invJt_p(6, 3);
-    pseudo_inverse(jt_p, invJt_p);
-
-    Eigen::VectorXd delta_joint(invJt_p*desired_kinematic_twist + (Id - invJt_p*jt_p)*Z);
-    //Eigen::JacobiSVD<Eigen::MatrixXd> svd(jt_p, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    //Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
+    //Eigen::MatrixXd invJt_p(6, 3);
+    //pseudo_inverse(jt_p, invJt_p);
+    if(fabs(jt.determinant()) < 1e-6){
+        std::cout << jt << std::endl
+                     << "*********************************************" << std::endl;
+        std::cout << " SINGULARITY !!" << std::endl;
+        //return zero_velocities
+        for (int i = 0;i<actual_joint_values.size();i++)
+            joints_velocity.push_back(0);
+        return joints_velocity;
+    }
+    //std::cout << jt.determinant() << std::endl
+      //           << "*********************************************" << std::endl;
+    //do the singular value decomposition which will then help in solving the system jt_p*joint_velocities = desired_twist. Refer to [1] for more details.
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(jt, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
 
     //fill the joints velocity with corresponding values from delta_joint variable, then return the vector
-    for (int i = 0; i < delta_joint.size(); i++) {
+    for (int i = 0;i < delta_joint.size();i++)
         joints_velocity.push_back(delta_joint(i));
-    }
-
+    //Eigen::VectorXd delta_joint(invJt_p*desired_kinematic_twist + (Id - invJt_p*jt_p)*Z);
+    //Eigen::JacobiSVD<Eigen::MatrixXd> svd(jt_p, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    //Eigen::VectorXd delta_joint(svd.solve(desired_kinematic_twist));
     return joints_velocity;
 }
 
@@ -368,7 +456,6 @@ void Kinematics::releave(){
     robot.getArm().set_speeds_to_zero(reduced_actuator_id);
     robot.getArm().close_usb_controllers();
 }
-
 
 void Kinematics::goto_desired_position(std::vector<double> desired_position){
     std::vector<double> joints_speeds(7);
@@ -524,11 +611,106 @@ void Kinematics::goto_desired_position_without_stress(std::vector<double> desire
 
 bool Kinematics::goto_desired_position_in_position_mode(std::vector<double> desired_position,std::vector<double>& joints_values){
     std::vector<double> joints_f_values;
+    //if orientation isn't given just move with end effector pointing ahead in the direction of final position
+    if(desired_position.size() < 6) {
+        double angle = atan2(desired_position[1],desired_position[0]);
+        desired_position.push_back(0); desired_position.push_back(2.3); desired_position.push_back(angle);
+    }
     joints_f_values = return_final_joints_values(desired_position,joints_values);
+    for(int i=0;i<joints_f_values.size();i++)
+        std::cout << "original theoritical finishing angle for joint: " << i << " is: " << joints_f_values[i] << std::endl;
+    for(int i=0;i<joints_f_values.size();i++)
+        joints_f_values[i] = fmod(joints_f_values[i], M_PI);
+    for(int i=0;i<joints_f_values.size();i++) {
+        if(joints_f_values[i] <= -M_PI)
+            joints_f_values[i] = joints_f_values[i] + M_PI;
+        else if (joints_f_values[i] > M_PI)
+            joints_f_values[i] = joints_f_values[i] - M_PI;
+    }
+    //bool output = false;
     bool output = goto_desired_joints_angles_position_mode(joints_f_values);
-    //for(int i=0;i<joints_f_values.size();i++)
-      //  std::cout << "theoritical finishing angle for joint: " << i << " is: " << joints_f_values[i] << std::endl;
+    for(int i=0;i<joints_f_values.size();i++)
+        std::cout << "theoritical finishing angle for joint: " << i << " is: " << joints_f_values[i] << std::endl;
     return output;
+}
+
+//Guides the simulated arm to desired position by setting joints velocities to proper values each iteration till the duration time is reached
+void Kinematics::goto_desired_position_inverse_geometrically(std::vector<double> desired_position){
+    //this will be the velocity command send to the joints
+    std::vector<double> joints_angles;
+    double body = Params::body_height, p1 = Params::p1_height, p5 = Params::p5_height, p6 = Params::p6_height, gripper_height = Params::gripper_height;
+    Eigen::Matrix4d TE_6, TF_E, TT;
+    //transformation matrix between End Effector's frame and last joint's frame (i.e. 6th joint)
+    TE_6 << 1, 0, 0,              0,
+            0, 1, 0,              0,
+            0, 0, 1, -(gripper_height+p5+p6),
+            0, 0, 0,              1;
+    Eigen::Matrix3d Rfinal = Rot('z',desired_position[5])*Rot('y',desired_position[4])*Rot('x',desired_position[3]);
+    TF_E << Rfinal(0,0), Rfinal(0,1), Rfinal(0,2), desired_position[0],
+            Rfinal(1,0), Rfinal(1,1), Rfinal(1,2), desired_position[1],
+            Rfinal(2,0), Rfinal(2,1), Rfinal(2,2), desired_position[2],
+                      0,           0,           0,                   1;
+    TT = TF_E*TE_6;
+    //find joints angles
+    //double Px = desired_position[0], Py = desired_position[1], Pz = desired_position[2], D3 = robot::Params::p2_height, RL4 = robot::Params::p3_height + robot::Params::p4_height;
+    double Px = TT(0,3), Py = TT(1,3), Pz = TT(2,3), D3 = Params::p2_height, RL4 = 0.14;//robot::Params::p3_height + robot::Params::p4_height;
+    //q1
+    double q1 = atan2(Py, Px);
+    joints_angles.push_back(q1);
+    //q2
+    double X = 2*(body + p1 - Pz)*D3;
+    double B1 = Px*cos(q1) + Py*sin(q1);
+    double Y = -2*B1*D3;
+    double Z = pow(RL4, 2) - pow(D3, 2) - pow((body + p1 - Pz), 2) - pow(B1, 2);
+    double c2 = (Y*Z + X*sqrt(pow(X,2) + pow(Y,2) - pow(Z,2)))/(pow(X,2) + pow(Y,2));
+    double s2 = (X*Z - Y*sqrt(pow(X,2) + pow(Y,2) - pow(Z,2)))/(pow(X,2) + pow(Y,2));
+    double q2 = atan2(s2,c2);
+    joints_angles.push_back(q2);
+    //q3
+    double s3 = ((body + p1 - Pz)*s2 - B1*c2 + D3)/RL4;
+    double c3 = (-B1*s2 + (Pz - (body + p1))*c2)/RL4;
+    double q3 = atan2(s3,c3);
+    joints_angles.push_back(q3);
+
+    //orientation part
+    double Fx = cos(q2 + q3)*(cos(q1)*Rfinal(0,0) + sin(q1)*Rfinal(1,0)) + sin(q2 + q3)*Rfinal(2,0),
+           Fy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,0) + sin(q1)*Rfinal(1,0)) + cos(q2 + q3)*Rfinal(2,0),
+           Fz = sin(q1)*Rfinal(0,0) - cos(q1)*Rfinal(1,0);
+    double Gx = cos(q2 + q3)*(cos(q1)*Rfinal(0,1) + sin(q1)*Rfinal(1,1)) + sin(q2 + q3)*Rfinal(2,1),
+           Gy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,1) + sin(q1)*Rfinal(1,1)) + cos(q2 + q3)*Rfinal(2,1),
+           Gz = sin(q1)*Rfinal(0,1) - cos(q1)*Rfinal(1,1);
+    double Hx = cos(q2 + q3)*(cos(q1)*Rfinal(0,2) + sin(q1)*Rfinal(1,2)) + sin(q2 + q3)*Rfinal(2,2),
+           Hy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,2) + sin(q1)*Rfinal(1,2)) + cos(q2 + q3)*Rfinal(2,2),
+           Hz = sin(q1)*Rfinal(0,2) - cos(q1)*Rfinal(1,2);
+
+    //q4
+    double q4 = atan2(Hz, -Hx);
+    joints_angles.push_back(q4);
+    //q5
+    double s5 = sin(q4)*Hz - cos(q4)*Hx;
+    double c5 = Hy;
+    double q5 = atan2(s5, c5);
+    joints_angles.push_back(q5);
+    //q6
+    double s6 = -cos(q4)*Fz - sin(q4)*Fx;
+    double c6 = -cos(q4)*Gz - sin(q4)*Gx;
+    double q6 = atan2(s6, c6);
+    joints_angles.push_back(q6);
+
+    for(int i = 0; i < joints_angles.size(); i++) {
+        joints_angles[i] = joints_angles[i] + initial_joint_values[i];
+        if (joints_angles[i] > 2*M_PI)
+            joints_angles[i] = fmod(joints_angles[i], 2*M_PI);
+    }
+    for(int i = 0; i < joints_angles.size(); i++) {
+        if(joints_angles[i] <= -M_PI)
+            joints_angles[i] = 2*M_PI + joints_angles[i];
+        else if (joints_angles[i] > M_PI)
+            joints_angles[i] = joints_angles[i] - 2*M_PI;
+    }
+    for (int i = 0; i < joints_angles.size(); ++i)
+        std::cout << "commanded joint " << i << " angle is: " << joints_angles[i] << std::endl;
+    goto_desired_joints_angles_position_mode(joints_angles);
 }
 
 void Kinematics::position_gripper(){
