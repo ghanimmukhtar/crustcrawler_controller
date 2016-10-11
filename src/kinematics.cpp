@@ -14,16 +14,15 @@ using namespace robot;
 Eigen::VectorXd distance(3),joints_distance(6);
 std::vector<double> start_position, current_cart_position;
 std::ofstream desired_velocity,feedback_velocity, desired_pose,fdb_position;
+std::vector<std::vector<double>> my_orientations; //to keep track of the orientation of each executed motion
 
 /*This defines the angles of each joint upon which the geometric parameters table was built, this means that these angles are the zero position and each joint angle should be
  * measured with reference to them
  * */
-double tmp[] = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
-std::vector<double> initial_joint_values(tmp, tmp + 8);
+std::vector<double> initial_joint_values = {0.0, -1.5708, 1.5708, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 //These are the joints which actually matter when we want to use the FK or IK, we exclude the two motors for the gripper
-unsigned char tmp1[] = {1, 2, 3, 4, 5, 6, 7};
-std::vector<unsigned char> reduced_actuator_id(tmp1, tmp1 + 7);
+std::vector<unsigned char> reduced_actuator_id = {1, 2, 3, 4, 5, 6, 7};
 
 //This is a function that takes as inputs: a character that name an axis (x, y or z), and a double that represents an angle of rotation about that axis. It returns the corresponding rotation matrix (3x3)
 Eigen::Matrix3d Kinematics::Rot(char axis, double angle) const{
@@ -634,83 +633,232 @@ bool Kinematics::goto_desired_position_in_position_mode(std::vector<double> desi
     return output;
 }
 
-//Guides the simulated arm to desired position by setting joints velocities to proper values each iteration till the duration time is reached
-void Kinematics::goto_desired_position_inverse_geometrically(std::vector<double> desired_position){
-    //this will be the velocity command send to the joints
-    std::vector<double> joints_angles;
-    double body = Params::body_height, p1 = Params::p1_height, p5 = Params::p5_height, p6 = Params::p6_height, gripper_height = Params::gripper_height;
-    Eigen::Matrix4d TE_6, TF_E, TT;
-    //transformation matrix between End Effector's frame and last joint's frame (i.e. 6th joint)
-    TE_6 << 1, 0, 0,              0,
-            0, 1, 0,              0,
-            0, 0, 1, -(gripper_height+p5+p6),
-            0, 0, 0,              1;
-    Eigen::Matrix3d Rfinal = Rot('z',desired_position[5])*Rot('y',desired_position[4])*Rot('x',desired_position[3]);
-    TF_E << Rfinal(0,0), Rfinal(0,1), Rfinal(0,2), desired_position[0],
-            Rfinal(1,0), Rfinal(1,1), Rfinal(1,2), desired_position[1],
-            Rfinal(2,0), Rfinal(2,1), Rfinal(2,2), desired_position[2],
-                      0,           0,           0,                   1;
-    TT = TF_E*TE_6;
-    //find joints angles
-    //double Px = desired_position[0], Py = desired_position[1], Pz = desired_position[2], D3 = robot::Params::p2_height, RL4 = robot::Params::p3_height + robot::Params::p4_height;
-    double Px = TT(0,3), Py = TT(1,3), Pz = TT(2,3), D3 = Params::p2_height, RL4 = 0.21;//robot::Params::p3_height + robot::Params::p4_height;
-    //q1
-    double q1 = atan2(Py, Px);
-    joints_angles.push_back(q1);
-    //q2
-    double X = 2*(body + p1 - Pz)*D3;
-    double B1 = Px*cos(q1) + Py*sin(q1);
-    double Y = -2*B1*D3;
-    double Z = pow(RL4, 2) - pow(D3, 2) - pow((body + p1 - Pz), 2) - pow(B1, 2);
-    double c2 = (Y*Z + X*sqrt(pow(X,2) + pow(Y,2) - pow(Z,2)))/(pow(X,2) + pow(Y,2));
-    double s2 = (X*Z - Y*sqrt(pow(X,2) + pow(Y,2) - pow(Z,2)))/(pow(X,2) + pow(Y,2));
-    double q2 = atan2(s2,c2);
-    joints_angles.push_back(q2);
-    //q3
-    double s3 = ((body + p1 - Pz)*s2 - B1*c2 + D3)/RL4;
-    double c3 = (-B1*s2 + (Pz - (body + p1))*c2)/RL4;
-    double q3 = atan2(s3,c3);
-    joints_angles.push_back(q3);
+//simple method to limit an angle between Pi and -Pi
+double Kinematics::angle_pi(double angle){
+    if (angle > 2*M_PI)
+        angle = fmod(angle, 2*M_PI);
+    if(angle <= -M_PI)
+        angle = 2*M_PI + angle;
+    else if (angle > M_PI)
+        angle = angle - 2*M_PI;
+    return angle;
+}
 
-    //orientation part
-    double Fx = cos(q2 + q3)*(cos(q1)*Rfinal(0,0) + sin(q1)*Rfinal(1,0)) + sin(q2 + q3)*Rfinal(2,0),
-           Fy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,0) + sin(q1)*Rfinal(1,0)) + cos(q2 + q3)*Rfinal(2,0),
-           Fz = sin(q1)*Rfinal(0,0) - cos(q1)*Rfinal(1,0);
-    double Gx = cos(q2 + q3)*(cos(q1)*Rfinal(0,1) + sin(q1)*Rfinal(1,1)) + sin(q2 + q3)*Rfinal(2,1),
-           Gy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,1) + sin(q1)*Rfinal(1,1)) + cos(q2 + q3)*Rfinal(2,1),
-           Gz = sin(q1)*Rfinal(0,1) - cos(q1)*Rfinal(1,1);
-    double Hx = cos(q2 + q3)*(cos(q1)*Rfinal(0,2) + sin(q1)*Rfinal(1,2)) + sin(q2 + q3)*Rfinal(2,2),
-           Hy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,2) + sin(q1)*Rfinal(1,2)) + cos(q2 + q3)*Rfinal(2,2),
-           Hz = sin(q1)*Rfinal(0,2) - cos(q1)*Rfinal(1,2);
+//a complete method that generates all possible joints solutions, for all orientations regarding a given position (X, Y, Z). For orientation around z it is fixed to have only meaningful solutions, but we can add it if needed
+std::vector<std::vector<double>> Kinematics::IG_complete(std::vector<double> desired_position){
+                                 std::vector<std::vector<double>> all_orientations, temperarily_container;
+                                 double Roll = 0, Pitch = M_PI/2.0, Yaw = atan2(desired_position[1], desired_position[0]), step = 0.6;
+                                 //while(Yaw < 2*M_PI){
+                                 //Pitch = M_PI/2.0;
+                                 while(Pitch < 2*M_PI){
+                                 Roll = 0;
+                                 while(Roll < 2*M_PI){
+                                 temperarily_container.clear();
+                                 std::vector<double> desired_pose = {desired_position[0], desired_position[1], desired_position[2], Roll, Pitch, Yaw};
+                                 temperarily_container = All_ig_solutions(desired_pose);
+                                 //for(int i = 0; i < temperarily_container.size(); ++i)
+                                 if(!temperarily_container.empty()){
+                                    all_orientations.push_back(temperarily_container[0]);
+                                    my_orientations.push_back({Roll, Pitch, Yaw});
+                                 }
+                                 //std::cout << "solving for orientation: " << Yaw << " , " << Pitch << " , " << Roll << std::endl;
+                                 Roll += step;
+                                 }
+                                 //std::cout << "*****************************************" << std::endl;
+                                 Pitch += step;
+                                 }
+                                 //Yaw += step;
+                                 //}
+                                 for(int i = 0; i < all_orientations.size(); ++i){
+                                     for(int j = 0; j < all_orientations.size(); ++j){
+                                         if(i != j){
+                                             if(all_orientations[i] == all_orientations[j]){
+                                                 std::cout << "two solutions are identical, solution: " << i << " and solution: " << j << std::endl;
+                                                 all_orientations.erase(all_orientations.begin() + j);
+                                             }
+                                         }
+                                     }
+                                 }
+                                 std::cout << "final solution size with all orientations is: " << all_orientations.size() << std::endl;
+                                 return all_orientations;
+}
 
-    //q4
-    double q4 = atan2(Hz, -Hx);
-    joints_angles.push_back(q4);
-    //q5
-    double s5 = sin(q4)*Hz - cos(q4)*Hx;
-    double c5 = Hy;
-    double q5 = atan2(s5, c5);
-    joints_angles.push_back(q5);
-    //q6
-    double s6 = -cos(q4)*Fz - sin(q4)*Fx;
-    double c6 = -cos(q4)*Gz - sin(q4)*Gx;
-    double q6 = atan2(s6, c6);
-    joints_angles.push_back(q6);
+//this method returns solutions that respect joints limits among the four "possible" solutions for the crustcrawler for a given pose (position and orientation)
+std::vector<std::vector<double>> Kinematics::All_ig_solutions(std::vector<double> desired_pose){
+                                 //this will be the command send to the joints
+                                 std::vector<std::vector<double>> final_joints_angles;
+                                 std::vector<double> joints_angles;
+                                 double ang_dist = 0.4;
+                                 Eigen::VectorXd min_joint_limit(6), max_joint_limit(6);
+                                 min_joint_limit << -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist;
+                                 max_joint_limit <<  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist;
+                                 double q1, q2, q3, q4, q5, q6;
+                                 double body = robot::Params::body_height, p1 = robot::Params::p1_height, p5 = robot::Params::p5_height, p6 = robot::Params::p6_height, gripper_height = robot::Params::gripper_height;
+                                 Eigen::Matrix4d TE_6, TF_E, TT;
+                                 //transformation matrix between End Effector's frame and last joint's frame (i.e. 6th joint)
+                                 TE_6 << 1, 0, 0,              0,
+                                         0, 1, 0,              0,
+                                         0, 0, 1, -(gripper_height+p5+p6),
+                                         0, 0, 0,              1;
+                                 Eigen::Matrix3d Rfinal = Rot('z', desired_pose[5]) * Rot('y', desired_pose[4]) * Rot('x', desired_pose[3]);
+                                 TF_E << Rfinal(0,0), Rfinal(0,1), Rfinal(0,2), desired_pose[0],
+                                         Rfinal(1,0), Rfinal(1,1), Rfinal(1,2), desired_pose[1],
+                                         Rfinal(2,0), Rfinal(2,1), Rfinal(2,2), desired_pose[2],
+                                                   0,           0,           0,               1;
+                                 //std::cout << "desired final orientation is: \n" << Rfinal << std::endl;
+                                 //std::cout << "*******************************************" << std::endl;
+                                 TT = TF_E*TE_6;
+                                 //find joints angles
+                                 double Px = TT(0,3), Py = TT(1,3), Pz = TT(2,3), D3 = robot::Params::p2_height, RL4 = 0.21;
+                                 for(int i = 0; i < 4; ++i){
+                                     joints_angles.clear();
+                                     //q1
+                                     if(i == 0 || i == 1)
+                                         q1 = angle_pi(atan2(Py, Px));
+                                     else
+                                         q1 = angle_pi(atan2(Py, Px) + M_PI);
+                                     joints_angles.push_back(q1);
+                                     double X = 2*(body + p1 - Pz)*D3;
+                                     double B1 = Px*cos(q1) + Py*sin(q1);
+                                     double Y = -2*B1*D3;
+                                     double Z = pow(RL4, 2) - pow(D3, 2) - pow((body + p1 - Pz), 2) - pow(B1, 2);
+                                     double c2 = (Y*Z + X*sqrt(pow(X,2) + pow(Y,2) - pow(Z,2)))/(pow(X,2) + pow(Y,2));
+                                     double s2 = (X*Z - Y*sqrt(pow(X,2) + pow(Y,2) - pow(Z,2)))/(pow(X,2) + pow(Y,2));
+                                     q2 = angle_pi(atan2(s2,c2) + initial_joint_values[1]);
+                                     //std::cout << "square root value is: " << pow(X,2) + pow(Y,2) - pow(Z,2) << std::endl;
+                                     joints_angles.push_back(q2);
+                                     q2 = atan2(s2,c2);
+                                     //std::cout << "initial solution for q2 is: " << q2 << std::endl;
+                                     //q3
+                                     double s3 = ((body + p1 - Pz)*s2 - B1*c2 + D3)/RL4;
+                                     double c3 = (-B1*s2 + (Pz - (body + p1))*c2)/RL4;
+                                     q3 = angle_pi(atan2(s3,c3) + initial_joint_values[2]);
+                                     joints_angles.push_back(q3);
+                                     q3 = atan2(s3,c3);
+                                     //std::cout << "initial solution for q3 is: " << q3 << std::endl;
+                                     //orientation part
+                                     double Fx = cos(q2 + q3)*(cos(q1)*Rfinal(0,0) + sin(q1)*Rfinal(1,0)) + sin(q2 + q3)*Rfinal(2,0),
+                                            Fy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,0) + sin(q1)*Rfinal(1,0)) + cos(q2 + q3)*Rfinal(2,0),
+                                            Fz = sin(q1)*Rfinal(0,0) - cos(q1)*Rfinal(1,0);
+                                     double Gx = cos(q2 + q3)*(cos(q1)*Rfinal(0,1) + sin(q1)*Rfinal(1,1)) + sin(q2 + q3)*Rfinal(2,1),
+                                            Gy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,1) + sin(q1)*Rfinal(1,1)) + cos(q2 + q3)*Rfinal(2,1),
+                                            Gz = sin(q1)*Rfinal(0,1) - cos(q1)*Rfinal(1,1);
+                                     double Hx = cos(q2 + q3)*(cos(q1)*Rfinal(0,2) + sin(q1)*Rfinal(1,2)) + sin(q2 + q3)*Rfinal(2,2),
+                                            Hy = -sin(q2 + q3)*(cos(q1)*Rfinal(0,2) + sin(q1)*Rfinal(1,2)) + cos(q2 + q3)*Rfinal(2,2),
+                                            Hz = sin(q1)*Rfinal(0,2) - cos(q1)*Rfinal(1,2);
 
-    for(int i = 0; i < joints_angles.size(); i++) {
-        joints_angles[i] = joints_angles[i] + initial_joint_values[i];
-        if (joints_angles[i] > 2*M_PI)
-            joints_angles[i] = fmod(joints_angles[i], 2*M_PI);
+                                     //q4
+                                     if(i == 0 || i == 2)
+                                         q4 = angle_pi(atan2(Hz, -Hx));
+                                     else
+                                         q4 = angle_pi(atan2(Hz, -Hx) + M_PI);
+                                     joints_angles.push_back(q4);
+                                     //q5
+                                     double s5 = sin(q4)*Hz - cos(q4)*Hx;
+                                     double c5 = Hy;
+                                     q5 = angle_pi(atan2(s5, c5));
+                                     joints_angles.push_back(q5);
+                                     //std::cout << "initial solution for q5 is: " << q5 << std::endl;
+                                     //q6
+                                     double s6 = -cos(q4)*Fz - sin(q4)*Fx;
+                                     double c6 = -cos(q4)*Gz - sin(q4)*Gx;
+                                     q6 = angle_pi(atan2(s6, c6));
+                                     joints_angles.push_back(q6);
+                                     if(joints_angles.size() == 6){
+                                         /*for (int k = 0; k < joints_angles.size(); ++k)
+                                             std::cout << "commanded joint " << k << " angle is: " << joints_angles[k] << std::endl;
+                                         std::cout << "**************************************" << std::endl;*/
+                                         //check if all elements are within joints limits
+                                         int count = 0;
+                                         for(int t = 0; t < joints_angles.size(); ++t){
+                                             if(joints_angles[t] > min_joint_limit(t) && joints_angles[t] < max_joint_limit(t)){
+                                                 count += 1;
+                                             }
+                                             /*else
+                                                 std::cout << "commanded joint " << t << " angle is: " << joints_angles[t]
+                                                              << " and it is out of joints limits, minimus is: " << min_joint_limit(t)
+                                                              << " and maximum is: " << max_joint_limit(t) << std::endl;*/
+                                         }
+                                         //std::cout << "**************************************" << std::endl;
+                                         if(count == 6)
+                                             final_joints_angles.push_back(joints_angles);
+                                     }
+                                     /*else
+                                         std::cout << " no viable solution found the angles are: "
+                                                   << q1 << ", " << q2 << ", " << q3 << ", "
+                                                   << q4 << ", " << q5 << ", " << q6 << std::endl;*/
+                                 }
+                                 /*for (int j = 0; j < final_joints_angles.size(); ++j){
+                                     for (int k = 0; k < final_joints_angles[j].size(); ++k)
+                                         std::cout << "commanded joint " << k << " angle is: " << final_joints_angles[j][k] << std::endl;
+                                 std::cout << "**************************************" << std::endl;
+                                 }*/
+                                 return final_joints_angles;
+                                 }
+
+//goto a cartesian position with different possible orientations and possibility to do push primitive after each trial using the option push
+void Kinematics::goto_desired_position_with_all_orientations(std::vector<double> desired_position, bool push){
+    std::vector<double> starting_joint_values = {-1.3, 0.3, -1.1, 0.0, -0.5, 0.0, 0.0, 0.0};
+    goto_desired_joints_angles_position_mode(starting_joint_values);
+    //find all solutions and all orientations
+    std::vector<std::vector<double>> solutions = IG_complete(desired_position);
+    for(int i = 0; i < solutions.size(); ++i){
+        /*std::cout << "trying to got to joints position: \n";
+        for(int j = 0; j < solutions[i].size(); ++j)
+            std::cout << solutions[i][j] << std::endl;*/
+        bool main_motion = goto_desired_joints_angles_position_mode(solutions[i]);
+        //std::cout << "****************************" << std::endl;
+        //do the primitive push here
+        usleep(1e6);
+        if(main_motion && push){
+            std::vector<double> pose = {desired_position[0], desired_position[1], desired_position[2], my_orientations[i][0], my_orientations[i][1], my_orientations[i][2]};
+            std::vector<double> push_solution = push_primitive(pose);
+            if(!push_solution.empty()){
+                goto_desired_joints_angles_position_mode(push_solution);
+                usleep(1e6);
+            }
+        }
+
+        //goto home position
+        goto_desired_joints_angles_position_mode(starting_joint_values);
+        usleep(1e6);
     }
-    for(int i = 0; i < joints_angles.size(); i++) {
-        if(joints_angles[i] <= -M_PI)
-            joints_angles[i] = 2*M_PI + joints_angles[i];
-        else if (joints_angles[i] > M_PI)
-            joints_angles[i] = joints_angles[i] - 2*M_PI;
+    std::cout << "!!!!!!!!!!!!!!!! FINISHED !!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+}
+
+//push primitive to be used with buttons modules
+std::vector<double> Kinematics::push_primitive(std::vector<double> pose){
+    double prim_distance = 0.1; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
+    Eigen::Vector4d target_position;
+    target_position << 0, 0, prim_distance, 1;
+    std::cout << "original angles: \n";
+    std::cout << "Roll = " << pose[3] << std::endl
+                 << "Pitch = " << pose[4] << std::endl
+                    << "Yaw = " << pose[5] << std::endl;
+    std::cout << "***************************************************" << std::endl;
+    /*std::cout << "working with angles: \n";
+    std::cout << "Roll = " << current_position[3] << std::endl
+                 << "Pitch = " << current_position[4] << std::endl
+                    << "Yaw = " << current_position[5] << std::endl;
+    std::cout << "***************************************************" << std::endl;*/
+    Eigen::Matrix3d rotation_matrix = Rot('z', pose[5]) * Rot('y', pose[4]) * Rot('x', pose[3]);
+    Eigen::Matrix4d transformation_matrix;
+    transformation_matrix << rotation_matrix(0,0), rotation_matrix(0,1), rotation_matrix(0,2), pose[0],
+                             rotation_matrix(1,0), rotation_matrix(1,1), rotation_matrix(1,2), pose[1],
+                             rotation_matrix(2,0), rotation_matrix(2,1), rotation_matrix(2,2), pose[2],
+                                                0,                    0,                    0,       1;
+
+    target_position = transformation_matrix * target_position;
+    std::vector<double> final_pose = {target_position[0], target_position[1], target_position[2], pose[3], pose[4], pose[5]};
+    //std::cout << "the push primitive should give a position: \n" << target_position << std::endl;
+    std::vector<std::vector<double>> solutions = All_ig_solutions(final_pose);
+    if(!solutions.empty())
+        return solutions[0];
+    else{
+        std::cout << "no primitive push solution !!!!!!!!!!!!!!!!!!!" << std::endl;
+        std::vector<double> empty_vector;
+        return empty_vector;
     }
-    for (int i = 0; i < joints_angles.size(); ++i)
-        std::cout << "commanded joint " << i << " angle is: " << joints_angles[i] << std::endl;
-    goto_desired_joints_angles_position_mode(joints_angles);
 }
 
 void Kinematics::position_gripper(){
@@ -836,7 +984,7 @@ std::vector<double> Kinematics::return_final_joints_values(std::vector<double> d
 bool Kinematics::goto_desired_joints_angles_position_mode(std::vector<double> desired_joints_angles)
 {
     //this will be the velocity command send to the joints
-    std::vector<double> joints_speeds(7),starting_angles,q_des;
+    std::vector<double> joints_speeds(7), starting_angles, q_des;
 
     //instantiate a robot class to use for controlling the arm
     Real robot;

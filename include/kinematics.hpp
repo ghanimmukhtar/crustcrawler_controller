@@ -32,8 +32,8 @@ private :
     double rt,rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
     double duration, my_alpha; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
     Eigen::Vector3d u;
-    const double max_speed = 1.0,max_angular_speed = 1.0;
-    const double max_load = 0.5;
+    const double max_speed = 1.0,max_angular_speed = 2.0;
+    const double max_load = 0.4;
 public :
 
     Kinematics()
@@ -134,11 +134,35 @@ public :
     bool goto_desired_position_in_position_mode(std::vector<double> desired_position, std::vector<double>& joints_values);
 
     /**
-     * @brief use invers geometric method to guide the arm to a desired pose by finding, analytically, joints positions, while monitoring joints torques for safety.
-     * @param desired pose, x, y and z coordinates and orientations, Roll, Pitch and Yaw
-     * @return nothing but guide the arm to the desired pose in joints position mode
+     * @brief simple method to limit any angle between Pi and -Pi.
+     * @param an angle.
+     * @return the angle limited between Pi and -Pi
      */
-    void goto_desired_position_inverse_geometrically(std::vector<double> desired_position);
+    double angle_pi(double angle);
+
+    /**
+     * @brief use All_ig_solutions() method to deduce all possible solutions to go to a desired position (X, Y, Z) by exploring different orientations.
+     * @param desired pose, x, y and z coordinates.
+     * @return a vector of joints solutions, if exist, to go to the desired position with different orientations
+     */
+    std::vector<std::vector<double>> IG_complete(std::vector<double> desired_position);
+
+    /**
+     * @brief use invers geometric (IG) to deduce all possible solutions to go to a desired pose.
+     * @param desired pose, x, y and z coordinates and orientations, Roll, Pitch and Yaw
+     * @return a vector of joints solutions, if exist, to go to the desired pose
+     */
+    std::vector<std::vector<double>> All_ig_solutions(std::vector<double> desired_position);
+
+    /**
+     * @brief use inverse geometric method to calculate all solutions to go to (X, Y, Z) with all possible orientations, while monitoring joints torques for safety.
+     * @param desired position, x, y and z coordinates
+     * @return nothing but guide the arm to the desired position with several posible orientations
+     */
+    void goto_desired_position_with_all_orientations(std::vector<double> desired_position, bool push = false);
+
+    //push primitive to be used with buttons modules
+    std::vector<double> push_primitive(std::vector<double> orientation);
 
     /**
      * @brief positioning the gripper to a predefined pose.
