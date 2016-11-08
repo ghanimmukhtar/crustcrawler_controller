@@ -802,6 +802,9 @@ void Kinematics::goto_desired_position_with_all_orientations(std::vector<double>
     goto_desired_joints_angles_position_mode(starting_joint_values);
     //find all solutions and all orientations
     std::vector<std::vector<double>> solutions = IG_complete(desired_position);
+    //this is for case of one fixed orientation
+    //std::vector<double> pose_fixed = {desired_position[0], desired_position[1], desired_position[2], 0, M_PI, 0};
+    //std::vector<std::vector<double>> solutions = All_ig_solutions(pose_fixed);
     for(int i = 0; i < solutions.size(); ++i){
         /*std::cout << "trying to got to joints position: \n";
         for(int j = 0; j < solutions[i].size(); ++j)
@@ -812,6 +815,10 @@ void Kinematics::goto_desired_position_with_all_orientations(std::vector<double>
         usleep(1e6);
         if(main_motion && push){
             std::vector<double> pose = {desired_position[0], desired_position[1], desired_position[2], my_orientations[i][0], my_orientations[i][1], my_orientations[i][2]};
+            //in case of one fixed orientation
+            //std::vector<double> pose = {desired_position[0], desired_position[1], desired_position[2], 0, M_PI, 0};
+
+            //execute primitive motion
             std::vector<double> push_solution = push_primitive(pose);
             if(!push_solution.empty()){
                 goto_desired_joints_angles_position_mode(push_solution);
@@ -828,7 +835,7 @@ void Kinematics::goto_desired_position_with_all_orientations(std::vector<double>
 
 //push primitive to be used with buttons modules
 std::vector<double> Kinematics::push_primitive(std::vector<double> pose){
-    double prim_distance = 0.1; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
+    double prim_distance = 0.07; //the small distance we want to end effector to push is 5 cm, we can change it till we are satisfied with the result
     Eigen::Vector4d target_position;
     target_position << 0, 0, prim_distance, 1;
     std::cout << "original angles: \n";
