@@ -161,6 +161,7 @@ public :
      */
     void goto_desired_position_with_all_orientations(std::vector<double> desired_position, bool push = false);
 
+    void goto_desired_position_with_one_orientation(std::vector<double> desired_position, bool push = false);
     //push primitive to be used with buttons modules
     std::vector<double> push_primitive(std::vector<double> orientation);
 
