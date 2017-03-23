@@ -70,14 +70,16 @@ Eigen::MatrixXd Kinematics::kk_mat(const std::vector<double>& a) const
      * revolute, 1 for translational and 2 for fixed joint, it will be useful later for the dynamic model if needed, for more details refer to : "Modeling and Control of
      * Manipulators Part I: Geometric and Kinematic Models" by Wisama KHALIL [1]
      * */
-    Eigen::MatrixXd kk(6, 5);
+    Eigen::MatrixXd kk(8, 5);
     //---|---sigma---|---alpha_j---|---d_j---|---q_j--------|---r_j---|
-    kk <<      0,         0,          0,       a[0],       body+p1,
+    kk <<   0,         0,          0,          0,          body+p1,
+            0,         0,          0,       a[0],           0,
             0,       M_PI/2,       0,       a[1],           0,
-            0,         0,         p2,       a[2],           0,
-            0,      -M_PI/2,       0,       a[3],           0.21,  //p3+p4,
+            0,         0,          p2,       a[2],           0,
+            0,      -M_PI/2,       0,       a[3],           0.21,
             0,       M_PI/2,       0,       a[4],           0,
-            0,      -M_PI/2,       0,       a[5],  gripper_height+p5+p6;
+            0,      -M_PI/2,       0,       a[5],           0,
+            0,         0,          0,          0,           gripper_height+p6+p5;
     return kk;
 }
 
@@ -688,7 +690,7 @@ std::vector<std::vector<double>> Kinematics::All_ig_solutions(std::vector<double
                                  //this will be the command send to the joints
                                  std::vector<std::vector<double>> final_joints_angles;
                                  std::vector<double> joints_angles;
-                                 double ang_dist = 0.4;
+                                 double ang_dist = 0.2;
                                  Eigen::VectorXd min_joint_limit(6), max_joint_limit(6);
                                  min_joint_limit << -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist, -M_PI/2 - ang_dist;
                                  max_joint_limit <<  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist,  M_PI/2 + ang_dist;
@@ -698,7 +700,7 @@ std::vector<std::vector<double>> Kinematics::All_ig_solutions(std::vector<double
                                  //transformation matrix between End Effector's frame and last joint's frame (i.e. 6th joint)
                                  TE_6 << 1, 0, 0,              0,
                                  0, 1, 0,              0,
-                                 0, 0, 1, -(gripper_height+p5+p6),
+                                 0, 0, 1, -(gripper_height+p6+p5),
                                  0, 0, 0,              1;
                                  Eigen::Matrix3d Rfinal = Rot('z', desired_pose[5]) * Rot('y', desired_pose[4]) * Rot('x', desired_pose[3]);
 TF_E << Rfinal(0,0), Rfinal(0,1), Rfinal(0,2), desired_pose[0],
@@ -832,6 +834,7 @@ void Kinematics::goto_desired_position_with_all_orientations(std::vector<double>
     }
     std::cout << "!!!!!!!!!!!!!!!! FINISHED !!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 }
+
 
 //goto a cartesian position with different possible orientations and possibility to do push primitive after each trial using the option push
 void Kinematics::goto_desired_position_with_one_orientation(std::vector<double> desired_position, bool push){

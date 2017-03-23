@@ -31,7 +31,9 @@ int main(int argc, char **argv)
 {
     std::vector<double> pose = {atof(argv[1]),atof(argv[2]),atof(argv[3])};
     //km.goto_desired_position_with_all_orientations(pose); //motion without push primitive (default is false)
-    km.goto_desired_position_with_all_orientations(pose, true); //motion with push primitive
+    km.goto_desired_position_with_one_orientation(pose, false); //motion with push primitive
+    //std::vector<double> starting_joint_values = {-0.6, -1.5708, 1.5708, 0.0, -1.5708, 0.0, 0.0, 0.0};
+    //km.goto_desired_joints_angles_position_mode(starting_joint_values);
     locate_end_effector();
     return 0;
 }

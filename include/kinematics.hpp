@@ -33,7 +33,7 @@ private :
     double duration, my_alpha; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
     Eigen::Vector3d u;
     const double max_speed = 1.0,max_angular_speed = 2.0;
-    const double max_load = 0.4;
+    const double max_load = 0.6;
 public :
 
     Kinematics()
