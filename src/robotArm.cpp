@@ -213,12 +213,19 @@ std::vector<double> RobotArm::get_joint_speeds(std::vector <byte_t> actuators_id
 
 //get the load of each joint
 std::vector<double> RobotArm::get_joint_loads(std::vector<byte_t> actuators_ids) {
+    bool error = false;
+    unsigned int j;
     std::vector<double> current_load;
     std::vector<int> current_load_integer;
     if(actuators_ids.empty())
         actuators_ids = getActuatorsIds();
 
     for (size_t i(0) ; i < actuators_ids.size() ; i++) {
+        j = 0;
+        do {
+            error = false;
+            j++;
+
         try {
             getController().send(dynamixel::ax12::GetLoad(actuators_ids[i]));
             getController().recv(Parameters::read_duration, getStatus());
@@ -231,13 +238,16 @@ std::vector<double> RobotArm::get_joint_loads(std::vector<byte_t> actuators_ids)
                     current_load.push_back(MX_integer_load_to_float(current_load_integer[i] - 1024));
             }
         } catch(dynamixel::Error e) {
-            std::cerr << "[real_arm] get joint values : error :" << e.msg() << std::endl;
-            exit(1);
-            return std::vector<double>(1, 100);
+            std::cerr << "[real_arm] get joint loads : error :" << e.msg() << std::endl;
+            error = true;;
         }
+        usleep(1e4);
+    } while (error && j <= 10);
+    if (j == 10) {
+        exit(1);
     }
-        //usleep(1e1);
 
+}
     return current_load;
 }
 

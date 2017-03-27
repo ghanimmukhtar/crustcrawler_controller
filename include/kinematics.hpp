@@ -10,6 +10,9 @@
 #include "real.hpp"
 #include "robot_params.hpp"
 
+
+using namespace robot;
+
 /**
  * @brief The ArmTrajectory class
  * This class provide the tools to control the fake crustcrawler in morse simulator (https://www.openrobots.org/morse/doc/stable/morse.html).
@@ -28,12 +31,13 @@ private :
 
 
     //variables definition
+    Real _Robot;
     std::vector<double> initial_pos;  //used to store the starting cartesian position of the arm's end effector, from which it will start moving towards desired position
     double rt,rtdot;  //used to store, at each iteration, the current value of the first derivative of a fifth degree polynomial interpolation
     double duration, my_alpha; //defines the duration, in seconds, for executing the trajectory from the initial_pos to the target position
     Eigen::Vector3d u;
     const double max_speed = 1.0,max_angular_speed = 2.0;
-    const double max_load = 0.6;
+    const double max_load = 0.4;
 public :
 
     Kinematics()
